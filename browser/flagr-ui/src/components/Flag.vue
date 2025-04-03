@@ -1,8 +1,5 @@
 <template>
-    <el-row
-        v-loading.fullscreen.lock="isEvaluating"
-        element-loading-text="Evaluating..."
-    >
+    <el-row>
         <el-col :span="20" :offset="2">
             <div class="container flag-container">
                 <el-dialog
@@ -448,6 +445,11 @@
                                                             :loading="
                                                                 variant.evaluating
                                                             "
+                                                            :disabled="
+                                                                variant.evaluating ||
+                                                                isAnyVariantEvaluating ||
+                                                                isSimulating
+                                                            "
                                                         >
                                                             Evaluate
                                                         </el-button>
@@ -532,6 +534,10 @@
                                         type="primary"
                                         @click="runABTestSimulation"
                                         :loading="isSimulating"
+                                        :disabled="
+                                            isSimulating ||
+                                            isAnyVariantEvaluating
+                                        "
                                         class="width--full"
                                     >
                                         Run A/B Test Simulation
@@ -691,6 +697,7 @@ export default {
             abTestResult: null,
             isCategorizing: false,
             categorizationResult: null,
+            isAnyVariantEvaluating: false,
         };
     },
     computed: {
@@ -1136,7 +1143,7 @@ export default {
 
                 // Set loading states
                 this.$set(variant, 'evaluating', true);
-                this.isEvaluating = true;
+                this.isAnyVariantEvaluating = true;
 
                 const response = await Axios.post(
                     'http://localhost:3004/simulation/relevance-score',
@@ -1153,7 +1160,7 @@ export default {
             } finally {
                 // Clear loading states
                 this.$set(variant, 'evaluating', false);
-                this.isEvaluating = false;
+                this.isAnyVariantEvaluating = false;
             }
         },
         async searchUsers(queryString, callback) {
@@ -1230,6 +1237,7 @@ export default {
 
             try {
                 this.isSimulating = true;
+                this.isAnyVariantEvaluating = true;
                 const variantA = this.flag.variants[0];
                 const variantB = this.flag.variants[1];
 
@@ -1241,7 +1249,6 @@ export default {
                     }
                 );
 
-                // Store results in both variants for display
                 this.$set(variantA, 'simulationResult', response.data);
                 this.$set(variantB, 'simulationResult', response.data);
 
@@ -1253,6 +1260,7 @@ export default {
                 console.error('Error running A/B test simulation:', error);
             } finally {
                 this.isSimulating = false;
+                this.isAnyVariantEvaluating = false;
             }
         },
         async fetchLLMModels() {
@@ -1287,10 +1295,10 @@ export default {
                 const response = await Axios.post(
                     'http://localhost:3004/simulation/categorization',
                     {
-                        chainId: this.chainId,
-                        tweetUrl: this.dagText,
+                        CHAIN_ID: this.chainId,
+                        TWEET_URL: this.dagText,
+                        categoryMatchPrompt: this.promptText,
                         llmProvider: this.selectedProvider,
-                        prompt: this.promptText,
                     }
                 );
                 this.categorizationResult = response.data;
