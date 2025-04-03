@@ -149,6 +149,15 @@
                             @input="handleChainIdChange"
                         ></el-input>
 
+                        <div class="dag-input-group">
+                            <el-input
+                                v-model="dagText"
+                                placeholder="Enter tweet url"
+                                class="dag-text-input"
+                                @input="handleTweetUrlChange"
+                            ></el-input>
+                        </div>
+
                         <el-select
                             v-model="selectedProvider"
                             placeholder="Select LLM Provider"
@@ -331,27 +340,9 @@
                                                 )
                                             }}</pre>
                                         </div>
-
-                                        <!-- Add A/B Test Simulation Result -->
-                                        <div
-                                            v-if="variant.simulationResult"
-                                            class="simulation-result"
-                                        >
-                                            <div class="simulation-header">
-                                                <h4>
-                                                    A/B Test Simulation Result
-                                                </h4>
-                                            </div>
-                                            <pre class="simulation-json">{{
-                                                JSON.stringify(
-                                                    variant.simulationResult,
-                                                    null,
-                                                    2
-                                                )
-                                            }}</pre>
-                                        </div>
                                     </div>
                                 </div>
+                                <!--
                                 <div class="variants-input">
                                     <div
                                         class="flex-row equal-width constraints-inputs-container"
@@ -370,6 +361,7 @@
                                         >Create Variant</el-button
                                     >
                                 </div>
+                                -->
 
                                 <!-- Add A/B Test Simulation Button -->
                                 <div
@@ -384,6 +376,23 @@
                                     >
                                         Run A/B Test Simulation
                                     </el-button>
+
+                                    <!-- Add A/B Test Simulation Result -->
+                                    <div
+                                        v-if="abTestResult"
+                                        class="simulation-result"
+                                    >
+                                        <div class="simulation-header">
+                                            <h4>A/B Test Simulation Result</h4>
+                                        </div>
+                                        <pre class="simulation-json">{{
+                                            JSON.stringify(
+                                                abTestResult,
+                                                null,
+                                                2
+                                            )
+                                        }}</pre>
+                                    </div>
                                 </div>
                             </el-card>
 
@@ -519,6 +528,7 @@ export default {
             selectedProvider: '',
             isSimulating: false,
             chainId: '',
+            abTestResult: null,
         };
     },
     computed: {
@@ -1072,6 +1082,8 @@ export default {
                 // Store results in both variants for display
                 this.$set(variantA, 'simulationResult', response.data);
                 this.$set(variantB, 'simulationResult', response.data);
+
+                this.abTestResult = response.data;
 
                 this.$message.success('A/B test simulation completed');
             } catch (error) {
