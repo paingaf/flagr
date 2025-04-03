@@ -115,6 +115,7 @@
                     >
                 </el-breadcrumb>
 
+                <!--
                 <div class="header-row">
                     <div class="header-controls">
                         <el-autocomplete
@@ -182,7 +183,9 @@
                         </el-button>
                     </div>
                 </div>
+                -->
 
+                <!--
                 <div class="header-row">
                     <div class="context-input-group">
                         <el-input
@@ -195,10 +198,167 @@
                         ></el-input>
                     </div>
                 </div>
+                -->
 
                 <div v-if="loaded && flag">
                     <el-tabs>
-                        <el-tab-pane label="Config">
+                        <el-tab-pane label="Categorization">
+                            <div class="categorization-container">
+                                <div class="header-controls">
+                                    <el-input
+                                        v-model="chainId"
+                                        placeholder="Enter Chain ID"
+                                        class="chain-id-input"
+                                        @input="handleChainIdChange"
+                                    ></el-input>
+
+                                    <div class="dag-input-group">
+                                        <el-input
+                                            v-model="dagText"
+                                            placeholder="Enter tweet url"
+                                            class="dag-text-input"
+                                            @input="handleTweetUrlChange"
+                                        ></el-input>
+                                    </div>
+
+                                    <el-select
+                                        v-model="selectedProvider"
+                                        placeholder="Select LLM Provider"
+                                        class="model-select"
+                                        @change="handleProviderChange"
+                                    >
+                                        <el-option
+                                            v-for="item in providers"
+                                            :key="item.value"
+                                            :label="item.label"
+                                            :value="item.value"
+                                        ></el-option>
+                                    </el-select>
+                                </div>
+
+                                <div class="header-row">
+                                    <div class="context-input-group">
+                                        <el-input
+                                            type="textarea"
+                                            v-model="promptText"
+                                            placeholder="Enter category match prompt"
+                                            :rows="10"
+                                            class="context-text-input"
+                                            @input="handleContextChange"
+                                        ></el-input>
+                                    </div>
+                                </div>
+
+                                <div class="submit-container">
+                                    <el-button
+                                        type="primary"
+                                        @click="runCategorization"
+                                        :loading="isCategorizing"
+                                        class="width--full"
+                                    >
+                                        Run Categorization
+                                    </el-button>
+
+                                    <!-- Categorization Result -->
+                                    <div
+                                        v-if="categorizationResult"
+                                        class="categorization-result"
+                                    >
+                                        <div class="result-header">
+                                            <h4>Categorization Result</h4>
+                                        </div>
+                                        <pre class="result-json">{{
+                                            JSON.stringify(
+                                                categorizationResult,
+                                                null,
+                                                2
+                                            )
+                                        }}</pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </el-tab-pane>
+
+                        <el-tab-pane label="Matching Scores">
+                            <div class="header-controls">
+                                <el-autocomplete
+                                    v-model="userSearchInput"
+                                    :fetch-suggestions="debounceSearchUsers"
+                                    placeholder="Search user by username"
+                                    :trigger-on-focus="false"
+                                    @select="handleUserSelect"
+                                    value-key="username"
+                                    class="user-select"
+                                >
+                                    <template slot-scope="{ item }">
+                                        <div class="user-suggestion-item">
+                                            <span>{{ item.username }}</span>
+                                            <span
+                                                style="
+                                                    float: right;
+                                                    color: #8492a6;
+                                                    font-size: 13px;
+                                                "
+                                            >
+                                                {{ item.firstName }}
+                                            </span>
+                                        </div>
+                                    </template>
+                                </el-autocomplete>
+
+                                <el-input
+                                    v-model="chainId"
+                                    placeholder="Enter Chain ID"
+                                    class="chain-id-input"
+                                    @input="handleChainIdChange"
+                                ></el-input>
+
+                                <div class="dag-input-group">
+                                    <el-input
+                                        v-model="dagText"
+                                        placeholder="Enter tweet url"
+                                        class="dag-text-input"
+                                        @input="handleTweetUrlChange"
+                                    ></el-input>
+                                </div>
+
+                                <el-select
+                                    v-model="selectedProvider"
+                                    placeholder="Select LLM Provider"
+                                    class="model-select"
+                                    @change="handleProviderChange"
+                                >
+                                    <el-option
+                                        v-for="item in providers"
+                                        :key="item.value"
+                                        :label="item.label"
+                                        :value="item.value"
+                                    ></el-option>
+                                </el-select>
+
+                                <el-button
+                                    class="config-button"
+                                    @click="openConfig"
+                                    type="primary"
+                                    plain
+                                >
+                                    <i class="el-icon-setting"></i> Weights
+                                </el-button>
+                            </div>
+
+                            <div class="header-row">
+                                <div class="context-input-group">
+                                    <el-input
+                                        type="textarea"
+                                        v-model="promptText"
+                                        placeholder="Enter prompt (optional)"
+                                        :rows="10"
+                                        class="context-text-input"
+                                        @input="handleContextChange"
+                                    ></el-input>
+                                </div>
+                            </div>
+
                             <el-card class="variants-container">
                                 <div slot="header" class="clearfix">
                                     <h2>Variants</h2>
@@ -529,6 +689,8 @@ export default {
             isSimulating: false,
             chainId: '',
             abTestResult: null,
+            isCategorizing: false,
+            categorizationResult: null,
         };
     },
     computed: {
@@ -1119,6 +1281,27 @@ export default {
                 console.error('Error fetching LLM models:', error);
             }
         },
+        async runCategorization() {
+            this.isCategorizing = true;
+            try {
+                const response = await Axios.post(
+                    'http://localhost:3004/simulation/categorization',
+                    {
+                        chainId: this.chainId,
+                        tweetUrl: this.dagText,
+                        llmProvider: this.selectedProvider,
+                        prompt: this.promptText,
+                    }
+                );
+                this.categorizationResult = response.data;
+                this.$message.success('Categorization completed');
+            } catch (error) {
+                this.$message.error('Failed to run categorization');
+                console.error('Error running categorization:', error);
+            } finally {
+                this.isCategorizing = false;
+            }
+        },
     },
     async created() {
         this.debounceSearchUsers = debounce(this.searchUsers, 300);
@@ -1315,6 +1498,7 @@ ol.constraints-inner {
 
     .context-input-group {
         width: 100%;
+        margin-top: 20px;
 
         .context-text-input {
             width: 100%;
@@ -1420,5 +1604,23 @@ ol.constraints-inner {
     padding: 10px;
     background-color: #f5f7fa;
     border-radius: 4px;
+}
+
+.categorization-container {
+    padding: 20px;
+}
+
+.result-header {
+    margin-bottom: 10px;
+}
+
+.result-json {
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.submit-container {
+    margin-top: 10px;
 }
 </style>

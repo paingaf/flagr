@@ -103,7 +103,7 @@ ol {
     }
 
     .navbar {
-        background-color: #74e5e0;
+        background-color: #d1f6ff;
         color: #2e4960;
         border: 0;
 
@@ -203,7 +203,7 @@ ol {
 
     .el-card {
         .el-card__header {
-            background-color: #74e5e0;
+            background-color: #d1f6ff;
             color: #2e4960;
             border: 0;
 
