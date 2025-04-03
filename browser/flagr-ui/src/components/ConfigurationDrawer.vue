@@ -7,6 +7,15 @@
     >
         <div class="configuration-drawer">
             <el-form :model="config" label-width="180px">
+                <!-- Add Weight Configuration Toggle -->
+                <el-form-item label="Enable Configuration">
+                    <el-switch
+                        v-model="weightsEnabled"
+                        active-color="#13ce66"
+                        inactive-color="#ff4949"
+                    ></el-switch>
+                </el-form-item>
+
                 <el-collapse v-model="activeNames">
                     <!-- Type Weights -->
                     <el-collapse-item title="Type Weights" name="type_weights">
@@ -16,6 +25,7 @@
                                 :step="0.1"
                                 :min="0"
                                 :max="1"
+                                :disabled="!weightsEnabled"
                             ></el-input-number>
                         </el-form-item>
                         <el-form-item label="Active Subscribed">
@@ -27,6 +37,7 @@
                                 :step="0.1"
                                 :min="0"
                                 :max="1"
+                                :disabled="!weightsEnabled"
                             ></el-input-number>
                         </el-form-item>
                         <el-form-item label="Passive Subscribed">
@@ -38,6 +49,7 @@
                                 :step="0.1"
                                 :min="0"
                                 :max="1"
+                                :disabled="!weightsEnabled"
                             ></el-input-number>
                         </el-form-item>
                         <el-form-item label="Active Unsubscribed">
@@ -49,6 +61,7 @@
                                 :step="0.1"
                                 :min="0"
                                 :max="1"
+                                :disabled="!weightsEnabled"
                             ></el-input-number>
                         </el-form-item>
                         <el-form-item label="Passive Unsubscribed">
@@ -60,6 +73,7 @@
                                 :step="0.1"
                                 :min="0"
                                 :max="1"
+                                :disabled="!weightsEnabled"
                             ></el-input-number>
                         </el-form-item>
                     </el-collapse-item>
@@ -78,6 +92,7 @@
                                 :step="0.1"
                                 :min="0"
                                 :max="1"
+                                :disabled="!weightsEnabled"
                             ></el-input-number>
                         </el-form-item>
                         <el-form-item label="Max Boost">
@@ -88,6 +103,7 @@
                                 :step="0.1"
                                 :min="0"
                                 :max="1"
+                                :disabled="!weightsEnabled"
                             ></el-input-number>
                         </el-form-item>
                         <el-form-item label="Recency Factor">
@@ -99,6 +115,7 @@
                                 :step="0.01"
                                 :min="0"
                                 :max="1"
+                                :disabled="!weightsEnabled"
                             ></el-input-number>
                         </el-form-item>
                     </el-collapse-item>
@@ -116,6 +133,7 @@
                                 :step="0.1"
                                 :min="0"
                                 :max="1"
+                                :disabled="!weightsEnabled"
                             ></el-input-number>
                         </el-form-item>
                         <el-form-item label="Optimal Length">
@@ -126,6 +144,7 @@
                                 :step="0.1"
                                 :min="0"
                                 :max="1"
+                                :disabled="!weightsEnabled"
                             ></el-input-number>
                         </el-form-item>
                         <el-form-item label="Max Boost">
@@ -136,6 +155,7 @@
                                 :step="0.1"
                                 :min="0"
                                 :max="1"
+                                :disabled="!weightsEnabled"
                             ></el-input-number>
                         </el-form-item>
                     </el-collapse-item>
@@ -153,6 +173,7 @@
                                 :step="0.1"
                                 :min="0"
                                 :max="1"
+                                :disabled="!weightsEnabled"
                             ></el-input-number>
                         </el-form-item>
                         <el-form-item label="Parent">
@@ -163,6 +184,7 @@
                                 :step="0.1"
                                 :min="0"
                                 :max="1"
+                                :disabled="!weightsEnabled"
                             ></el-input-number>
                         </el-form-item>
                         <el-form-item label="Child">
@@ -173,6 +195,7 @@
                                 :step="0.1"
                                 :min="0"
                                 :max="1"
+                                :disabled="!weightsEnabled"
                             ></el-input-number>
                         </el-form-item>
                         <el-form-item label="Sibling">
@@ -183,6 +206,7 @@
                                 :step="0.1"
                                 :min="0"
                                 :max="1"
+                                :disabled="!weightsEnabled"
                             ></el-input-number>
                         </el-form-item>
                         <el-form-item label="Cousin">
@@ -193,6 +217,7 @@
                                 :step="0.1"
                                 :min="0"
                                 :max="1"
+                                :disabled="!weightsEnabled"
                             ></el-input-number>
                         </el-form-item>
                     </el-collapse-item>
@@ -205,6 +230,7 @@
                                 :step="0.01"
                                 :min="0"
                                 :max="1"
+                                :disabled="!weightsEnabled"
                             ></el-input-number>
                         </el-form-item>
                         <el-form-item label="Min Threshold">
@@ -215,6 +241,7 @@
                                 :step="0.1"
                                 :min="0"
                                 :max="1"
+                                :disabled="!weightsEnabled"
                             ></el-input-number>
                         </el-form-item>
                         <el-form-item label="Max Age (Weeks)">
@@ -224,6 +251,7 @@
                                 "
                                 :step="1"
                                 :min="1"
+                                :disabled="!weightsEnabled"
                             ></el-input-number>
                         </el-form-item>
                         <el-form-item label="Recent Days Threshold">
@@ -234,6 +262,7 @@
                                 "
                                 :step="1"
                                 :min="1"
+                                :disabled="!weightsEnabled"
                             ></el-input-number>
                         </el-form-item>
                     </el-collapse-item>
@@ -252,6 +281,7 @@
                                 :step="0.05"
                                 :min="0"
                                 :max="1"
+                                :disabled="!weightsEnabled"
                             ></el-input-number>
                         </el-form-item>
                         <el-form-item label="Type">
@@ -260,6 +290,7 @@
                                 :step="0.05"
                                 :min="0"
                                 :max="1"
+                                :disabled="!weightsEnabled"
                             ></el-input-number>
                         </el-form-item>
                         <el-form-item label="Interaction">
@@ -270,6 +301,7 @@
                                 :step="0.05"
                                 :min="0"
                                 :max="1"
+                                :disabled="!weightsEnabled"
                             ></el-input-number>
                         </el-form-item>
                         <el-form-item label="Time Decay">
@@ -280,6 +312,7 @@
                                 :step="0.05"
                                 :min="0"
                                 :max="1"
+                                :disabled="!weightsEnabled"
                             ></el-input-number>
                         </el-form-item>
                         <el-form-item label="Thread Length">
@@ -291,6 +324,7 @@
                                 :step="0.05"
                                 :min="0"
                                 :max="1"
+                                :disabled="!weightsEnabled"
                             ></el-input-number>
                         </el-form-item>
                         <el-form-item label="Common Categories">
@@ -302,6 +336,7 @@
                                 :step="0.05"
                                 :min="0"
                                 :max="1"
+                                :disabled="!weightsEnabled"
                             ></el-input-number>
                         </el-form-item>
                         <el-form-item label="Relationship Tweet Count">
@@ -313,6 +348,7 @@
                                 :step="0.05"
                                 :min="0"
                                 :max="1"
+                                :disabled="!weightsEnabled"
                             ></el-input-number>
                         </el-form-item>
                     </el-collapse-item>
@@ -325,6 +361,7 @@
                         :step="0.1"
                         :min="0"
                         :max="1"
+                        :disabled="!weightsEnabled"
                     ></el-input-number>
                 </el-form-item>
                 <el-form-item label="Enable Early Threshold Break">
@@ -340,6 +377,7 @@
                         :step="0.1"
                         :min="0"
                         :max="1"
+                        :disabled="!weightsEnabled"
                     ></el-input-number>
                 </el-form-item>
 
@@ -433,6 +471,7 @@ export default {
             drawerVisible: false,
             config: JSON.parse(JSON.stringify(defaultConfig)),
             activeNames: ['json_output'],
+            weightsEnabled: true,
         };
     },
     methods: {
