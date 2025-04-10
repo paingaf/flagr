@@ -603,6 +603,8 @@ const { sum, pluck, handleErr } = helpers;
 
 const { API_URL, FLAGR_UI_POSSIBLE_ENTITY_TYPES } = constants;
 
+const TG_API_URL = process.env.VUE_APP_TG_API_URL;
+
 const DEFAULT_SEGMENT = {
     description: '',
     rolloutPercent: 50,
@@ -1095,7 +1097,7 @@ export default {
         async fetchAuthors() {
             try {
                 const response = await Axios.get(
-                    'http://localhost:3004/categories/author-dags'
+                    `${TG_API_URL}/categories/author-dags`
                 );
                 // Extract unique authors from the response
                 this.authors = [
@@ -1146,7 +1148,7 @@ export default {
                 this.isAnyVariantEvaluating = true;
 
                 const response = await Axios.post(
-                    'http://localhost:3004/simulation/relevance-score',
+                    `${TG_API_URL}/simulation/relevance-score`,
                     variant.attachment
                 );
 
@@ -1166,7 +1168,7 @@ export default {
         async searchUsers(queryString, callback) {
             try {
                 const response = await Axios.get(
-                    `http://localhost:3004/tg-users/preferences`,
+                    `${TG_API_URL}/tg-users/preferences`,
                     {
                         params: {
                             ...(queryString &&
@@ -1187,7 +1189,7 @@ export default {
         async searchAuthors(queryString, callback) {
             try {
                 const response = await Axios.get(
-                    'http://localhost:3004/categories/author-dags',
+                    `${TG_API_URL}/categories/author-dags`,
                     {
                         params: {
                             ...(queryString &&
@@ -1242,7 +1244,7 @@ export default {
                 const variantB = this.flag.variants[1];
 
                 const response = await Axios.post(
-                    'http://localhost:3004/simulation/ab-test',
+                    `${TG_API_URL}/simulation/ab-test`,
                     {
                         configA: variantA.attachment,
                         configB: variantB.attachment,
@@ -1266,7 +1268,7 @@ export default {
         async fetchLLMModels() {
             try {
                 const response = await Axios.get(
-                    'http://localhost:3004/llm-models/names'
+                    `${TG_API_URL}/llm-models/names`
                 );
                 this.providers = response.data.map((model) => ({
                     label: model,
@@ -1293,7 +1295,7 @@ export default {
             this.isCategorizing = true;
             try {
                 const response = await Axios.post(
-                    'http://localhost:3004/simulation/categorization',
+                    `${TG_API_URL}/simulation/categorization`,
                     {
                         CHAIN_ID: this.chainId,
                         TWEET_URL: this.dagText,
@@ -1323,7 +1325,7 @@ export default {
         this.fetchLLMModels();
 
         try {
-            const response = await fetch('http://localhost:3004/app-config');
+            const response = await fetch(`${TG_API_URL}/app-config`);
             const data = await response.json();
 
             // Initialize configuration with any existing values
