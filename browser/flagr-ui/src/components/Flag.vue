@@ -219,9 +219,10 @@
                                     </div>
 
                                     <el-select
-                                        v-model="selectedProvider"
-                                        placeholder="Select LLM Provider"
+                                        v-model="selectedProviders"
+                                        placeholder="Select LLM Providers"
                                         class="model-select"
+                                        multiple
                                         @change="handleProviderChange"
                                     >
                                         <el-option
@@ -264,6 +265,83 @@
                                         <div class="result-header">
                                             <h4>Categorization Result</h4>
                                         </div>
+                                        <el-table
+                                            :data="categorizationResult"
+                                            style="
+                                                width: 100%;
+                                                margin-bottom: 20px;
+                                            "
+                                        >
+                                            <el-table-column
+                                                prop="modelName"
+                                                label="Model Name"
+                                                width="180"
+                                            ></el-table-column>
+                                            <el-table-column
+                                                prop="totalCost"
+                                                label="Total Cost"
+                                                width="120"
+                                            >
+                                                <template slot-scope="scope">
+                                                    {{
+                                                        scope.row.totalCost.toFixed(
+                                                            4
+                                                        )
+                                                    }}
+                                                </template>
+                                            </el-table-column>
+                                            <el-table-column
+                                                prop="timeTakenMs"
+                                                label="Time (ms)"
+                                                width="120"
+                                            ></el-table-column>
+                                            <el-table-column label="Categories">
+                                                <template slot-scope="scope">
+                                                    <div
+                                                        v-for="(
+                                                            categories, level
+                                                        ) in scope.row
+                                                            .categoryResponse"
+                                                        :key="level"
+                                                    >
+                                                        <strong
+                                                            >{{
+                                                                level
+                                                            }}:</strong
+                                                        >
+                                                        {{
+                                                            categories.join(
+                                                                ', '
+                                                            )
+                                                        }}
+                                                    </div>
+                                                </template>
+                                            </el-table-column>
+                                            <el-table-column
+                                                label="Prompt"
+                                                width="300"
+                                            >
+                                                <template slot-scope="scope">
+                                                    <div
+                                                        style="
+                                                            white-space: pre-wrap;
+                                                            word-break: break-word;
+                                                        "
+                                                    >
+                                                        {{
+                                                            scope.row.prompt
+                                                                .length > 50
+                                                                ? scope.row.prompt.substring(
+                                                                      0,
+                                                                      50
+                                                                  ) + '...'
+                                                                : scope.row
+                                                                      .prompt
+                                                        }}
+                                                    </div>
+                                                </template>
+                                            </el-table-column>
+                                        </el-table>
                                         <pre class="result-json">{{
                                             JSON.stringify(
                                                 categorizationResult,
@@ -320,9 +398,10 @@
                                 </div>
 
                                 <el-select
-                                    v-model="selectedProvider"
-                                    placeholder="Select LLM Provider"
+                                    v-model="selectedProviders"
+                                    placeholder="Select LLM Providers"
                                     class="model-select"
+                                    multiple
                                     @change="handleProviderChange"
                                 >
                                     <el-option
@@ -693,7 +772,7 @@ export default {
             debounceSearchUsers: null,
             debounceSearchAuthors: null,
             providers: [],
-            selectedProvider: '',
+            selectedProviders: [],
             isSimulating: false,
             chainId: '',
             abTestResult: null,
@@ -1211,12 +1290,12 @@ export default {
                 callback([]);
             }
         },
-        handleProviderChange(value) {
+        handleProviderChange(values) {
             if (this.$refs.configDrawer) {
                 const currentConfig = this.$refs.configDrawer.config;
                 this.$refs.configDrawer.updateConfig({
                     ...currentConfig,
-                    llmProvider: value,
+                    llmProvider: values.join(','),
                 });
             }
         },
@@ -1276,13 +1355,16 @@ export default {
                 }));
 
                 // Set default provider if none selected
-                if (!this.selectedProvider && this.providers.length > 0) {
-                    this.selectedProvider = this.providers[0].value;
+                if (
+                    !this.selectedProviders.length &&
+                    this.providers.length > 0
+                ) {
+                    this.selectedProviders = [this.providers[0].value];
                     if (this.$refs.configDrawer) {
                         const currentConfig = this.$refs.configDrawer.config;
                         this.$refs.configDrawer.updateConfig({
                             ...currentConfig,
-                            llmProvider: this.selectedProvider,
+                            llmProvider: this.selectedProviders[0],
                         });
                     }
                 }
@@ -1300,7 +1382,7 @@ export default {
                         CHAIN_ID: this.chainId,
                         TWEET_URL: this.dagText,
                         categoryMatchPrompt: this.promptText,
-                        llmProvider: this.selectedProvider,
+                        llmProviders: this.selectedProviders,
                     }
                 );
                 this.categorizationResult = response.data;
@@ -1342,7 +1424,7 @@ export default {
                 // Set default provider
                 const providers = Object.values(this.providers);
                 if (providers.length > 0) {
-                    this.selectedProvider = providers[0].value;
+                    this.selectedProviders = [providers[0].value];
                     newConfig.llmProvider = providers[0].value;
                 }
 
