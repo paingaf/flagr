@@ -1438,17 +1438,15 @@ export default {
                     value: model,
                 }));
 
-                // Set default provider if none selected
-                if (
-                    !this.selectedProviders.length &&
-                    this.providers.length > 0
-                ) {
-                    this.selectedProviders = [this.providers[0].value];
+                // Set mistral-large-2407 as default provider
+                const defaultModel = 'mistral-large-2407';
+                if (this.providers.some((p) => p.value === defaultModel)) {
+                    this.selectedProviders = [defaultModel];
                     if (this.$refs.configDrawer) {
                         const currentConfig = this.$refs.configDrawer.config;
                         this.$refs.configDrawer.updateConfig({
                             ...currentConfig,
-                            llmProvider: this.selectedProviders[0],
+                            llmProvider: defaultModel,
                         });
                     }
                 }
@@ -1467,6 +1465,7 @@ export default {
                         TWEET_URL: this.dagText,
                         categoryMatchPrompt: this.promptText,
                         llmProviders: this.selectedProviders,
+                        promptId: this.selectedPrompt || null,
                     }
                 );
                 this.categorizationResult = response.data;
@@ -1482,6 +1481,17 @@ export default {
             try {
                 const response = await Axios.get(`${TG_API_URL}/prompts`);
                 this.prompts = response.data;
+
+                // Find and select the "Default" prompt
+                const defaultPrompt = this.prompts.find(
+                    (p) => p.name === 'Default'
+                );
+                if (defaultPrompt) {
+                    this.selectedPrompt = defaultPrompt._id;
+                    this.promptText = defaultPrompt.content;
+                    this.originalPromptText = defaultPrompt.content;
+                    this.handleContextChange(defaultPrompt.content);
+                }
             } catch (error) {
                 this.$message.error('Failed to fetch prompts');
                 console.error('Error fetching prompts:', error);
