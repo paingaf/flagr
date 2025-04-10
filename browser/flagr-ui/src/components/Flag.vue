@@ -354,7 +354,7 @@
                                                 </template>
                                             </el-table-column>
                                             <el-table-column
-                                                label="Prompt"
+                                                label="Prompt Name"
                                                 width="300"
                                             >
                                                 <template slot-scope="scope">
@@ -365,14 +365,16 @@
                                                         "
                                                     >
                                                         {{
-                                                            scope.row.prompt
+                                                            scope.row.metadata
+                                                                .promptName
                                                                 .length > 50
-                                                                ? scope.row.prompt.substring(
+                                                                ? scope.row.metadata.promptName.substring(
                                                                       0,
                                                                       50
                                                                   ) + '...'
                                                                 : scope.row
-                                                                      .prompt
+                                                                      .metadata
+                                                                      .promptName
                                                         }}
                                                     </div>
                                                 </template>
