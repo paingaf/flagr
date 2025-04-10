@@ -232,6 +232,20 @@
                                             :value="item.value"
                                         ></el-option>
                                     </el-select>
+
+                                    <el-select
+                                        v-model="selectedPrompt"
+                                        placeholder="Select Prompt"
+                                        class="prompt-select"
+                                        @change="handlePromptChange"
+                                    >
+                                        <el-option
+                                            v-for="item in prompts"
+                                            :key="item._id"
+                                            :label="item.name"
+                                            :value="item._id"
+                                        ></el-option>
+                                    </el-select>
                                 </div>
 
                                 <div class="header-row">
@@ -242,8 +256,30 @@
                                             placeholder="Enter category match prompt"
                                             :rows="10"
                                             class="context-text-input"
-                                            @input="handleContextChange"
+                                            @input="handlePromptInput"
                                         ></el-input>
+
+                                        <div
+                                            v-if="isPromptModified"
+                                            class="prompt-save-container"
+                                        >
+                                            <el-input
+                                                v-model="newPromptName"
+                                                placeholder="Enter prompt name"
+                                                class="prompt-name-input"
+                                            ></el-input>
+                                            <div class="prompt-actions">
+                                                <el-button
+                                                    type="primary"
+                                                    @click="savePrompt"
+                                                    >Save New Prompt</el-button
+                                                >
+                                                <el-button
+                                                    @click="cancelPromptEdit"
+                                                    >Cancel</el-button
+                                                >
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -773,12 +809,17 @@ export default {
             debounceSearchAuthors: null,
             providers: [],
             selectedProviders: [],
+            prompts: [],
+            selectedPrompt: '',
             isSimulating: false,
             chainId: '',
             abTestResult: null,
             isCategorizing: false,
             categorizationResult: null,
             isAnyVariantEvaluating: false,
+            isPromptModified: false,
+            newPromptName: '',
+            originalPromptText: '',
         };
     },
     computed: {
@@ -1215,6 +1256,49 @@ export default {
                 });
             }
         },
+        handlePromptInput(value) {
+            if (this.selectedPrompt) {
+                this.isPromptModified = value !== this.originalPromptText;
+            }
+            this.handleContextChange(value);
+        },
+        async savePrompt() {
+            if (!this.newPromptName) {
+                this.$message.error('Please enter a prompt name');
+                return;
+            }
+
+            try {
+                await Axios.post(`${TG_API_URL}/prompts`, {
+                    content: this.promptText,
+                    name: this.newPromptName,
+                });
+
+                this.$message.success('Prompt saved successfully');
+                this.isPromptModified = false;
+                this.newPromptName = '';
+                this.originalPromptText = this.promptText;
+                await this.fetchPrompts();
+            } catch (error) {
+                this.$message.error('Failed to save prompt');
+                console.error('Error saving prompt:', error);
+            }
+        },
+        cancelPromptEdit() {
+            this.promptText = this.originalPromptText;
+            this.isPromptModified = false;
+            this.newPromptName = '';
+            this.handleContextChange(this.originalPromptText);
+        },
+        handlePromptChange(value) {
+            const selectedPrompt = this.prompts.find((p) => p._id === value);
+            if (selectedPrompt) {
+                this.promptText = selectedPrompt.content;
+                this.originalPromptText = selectedPrompt.content;
+                this.isPromptModified = false;
+                this.handleContextChange(selectedPrompt.content);
+            }
+        },
         async evaluateVariant(variant) {
             try {
                 if (!variant.attachment) {
@@ -1394,6 +1478,15 @@ export default {
                 this.isCategorizing = false;
             }
         },
+        async fetchPrompts() {
+            try {
+                const response = await Axios.get(`${TG_API_URL}/prompts`);
+                this.prompts = response.data;
+            } catch (error) {
+                this.$message.error('Failed to fetch prompts');
+                console.error('Error fetching prompts:', error);
+            }
+        },
     },
     async created() {
         this.debounceSearchUsers = debounce(this.searchUsers, 300);
@@ -1405,6 +1498,7 @@ export default {
         this.fetchTGUsers();
         this.fetchAuthors();
         this.fetchLLMModels();
+        this.fetchPrompts();
 
         try {
             const response = await fetch(`${TG_API_URL}/app-config`);
@@ -1605,7 +1699,8 @@ ol.constraints-inner {
 
     .user-select,
     .author-select,
-    .model-select {
+    .model-select,
+    .prompt-select {
         width: 200px;
     }
 
@@ -1714,5 +1809,21 @@ ol.constraints-inner {
 
 .submit-container {
     margin-top: 10px;
+}
+
+.prompt-save-container {
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.prompt-name-input {
+    width: 200px;
+}
+
+.prompt-actions {
+    display: flex;
+    gap: 10px;
 }
 </style>
