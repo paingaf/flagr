@@ -436,10 +436,9 @@
                                 </div>
 
                                 <el-select
-                                    v-model="selectedProviders"
-                                    placeholder="Select LLM Providers"
+                                    v-model="selectedProvider"
+                                    placeholder="Select LLM Provider"
                                     class="model-select"
-                                    multiple
                                     @change="handleProviderChange"
                                 >
                                     <el-option
@@ -447,6 +446,20 @@
                                         :key="item.value"
                                         :label="item.label"
                                         :value="item.value"
+                                    ></el-option>
+                                </el-select>
+
+                                <el-select
+                                    v-model="selectedPrompt"
+                                    placeholder="Select Prompt"
+                                    class="prompt-select"
+                                    @change="handlePromptChange"
+                                >
+                                    <el-option
+                                        v-for="item in prompts"
+                                        :key="item._id"
+                                        :label="item.name"
+                                        :value="item._id"
                                     ></el-option>
                                 </el-select>
 
@@ -468,8 +481,29 @@
                                         placeholder="Enter prompt (optional)"
                                         :rows="10"
                                         class="context-text-input"
-                                        @input="handleContextChange"
+                                        @input="handlePromptInput"
                                     ></el-input>
+
+                                    <div
+                                        v-if="isPromptModified"
+                                        class="prompt-save-container"
+                                    >
+                                        <el-input
+                                            v-model="newPromptName"
+                                            placeholder="Enter prompt name"
+                                            class="prompt-name-input"
+                                        ></el-input>
+                                        <div class="prompt-actions">
+                                            <el-button
+                                                type="primary"
+                                                @click="savePrompt"
+                                                >Save New Prompt</el-button
+                                            >
+                                            <el-button @click="cancelPromptEdit"
+                                                >Cancel</el-button
+                                            >
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -822,6 +856,7 @@ export default {
             isPromptModified: false,
             newPromptName: '',
             originalPromptText: '',
+            selectedProvider: '',
         };
     },
     computed: {
@@ -1262,7 +1297,18 @@ export default {
             if (this.selectedPrompt) {
                 this.isPromptModified = value !== this.originalPromptText;
             }
-            this.handleContextChange(value);
+
+            if (this.$refs.configDrawer) {
+                const currentConfig = this.$refs.configDrawer.config;
+                this.$refs.configDrawer.updateConfig({
+                    ...currentConfig,
+                    categoryMatchPrompt: value,
+                    // Clear promptId when prompt is modified
+                    promptId: this.isPromptModified
+                        ? null
+                        : currentConfig.promptId,
+                });
+            }
         },
         async savePrompt() {
             if (!this.newPromptName) {
@@ -1271,7 +1317,7 @@ export default {
             }
 
             try {
-                await Axios.post(`${TG_API_URL}/prompts`, {
+                const response = await Axios.post(`${TG_API_URL}/prompts`, {
                     content: this.promptText,
                     name: this.newPromptName,
                 });
@@ -1280,7 +1326,21 @@ export default {
                 this.isPromptModified = false;
                 this.newPromptName = '';
                 this.originalPromptText = this.promptText;
+
+                // Update config with new promptId
+                if (this.$refs.configDrawer && response.data._id) {
+                    const currentConfig = this.$refs.configDrawer.config;
+                    this.$refs.configDrawer.updateConfig({
+                        ...currentConfig,
+                        promptId: response.data._id,
+                    });
+                }
+
                 await this.fetchPrompts();
+                // Set the newly created prompt as selected
+                if (response.data._id) {
+                    this.selectedPrompt = response.data._id;
+                }
             } catch (error) {
                 this.$message.error('Failed to save prompt');
                 console.error('Error saving prompt:', error);
@@ -1298,7 +1358,16 @@ export default {
                 this.promptText = selectedPrompt.content;
                 this.originalPromptText = selectedPrompt.content;
                 this.isPromptModified = false;
-                this.handleContextChange(selectedPrompt.content);
+
+                // Update both prompt text and promptId in config
+                if (this.$refs.configDrawer) {
+                    const currentConfig = this.$refs.configDrawer.config;
+                    this.$refs.configDrawer.updateConfig({
+                        ...currentConfig,
+                        categoryMatchPrompt: selectedPrompt.content,
+                        promptId: selectedPrompt._id,
+                    });
+                }
             }
         },
         async evaluateVariant(variant) {
@@ -1379,10 +1448,22 @@ export default {
         handleProviderChange(values) {
             if (this.$refs.configDrawer) {
                 const currentConfig = this.$refs.configDrawer.config;
-                this.$refs.configDrawer.updateConfig({
-                    ...currentConfig,
-                    llmProvider: values.join(','),
-                });
+                const isMultipleSelect = Array.isArray(values);
+
+                // For Categorization tab (multiple select)
+                if (isMultipleSelect) {
+                    this.$refs.configDrawer.updateConfig({
+                        ...currentConfig,
+                        llmProvider: values.join(','),
+                    });
+                }
+                // For Matching Scores tab (single select)
+                else {
+                    this.$refs.configDrawer.updateConfig({
+                        ...currentConfig,
+                        llmProvider: values,
+                    });
+                }
             }
         },
         handleChainIdChange(value) {
