@@ -318,6 +318,8 @@
                                                 label="Total Cost"
                                                 width="120"
                                             >
+                                                <template> 0 </template>
+                                                <!--
                                                 <template slot-scope="scope">
                                                     {{
                                                         scope.row.totalCost.toFixed(
@@ -325,6 +327,7 @@
                                                         )
                                                     }}
                                                 </template>
+                                                -->
                                             </el-table-column>
                                             <el-table-column
                                                 prop="timeTakenMs"
