@@ -34,3 +34,4 @@ coverage.txt
 .env
 
 af-custom/data
+/browser/flagr-ui/dist/

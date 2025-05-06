@@ -1,0 +1,7 @@
+[build]
+dockerfile = "af-custom/Dockerfile"
+dockerfilePath = "af-custom/Dockerfile"
+
+[deploy]
+healthcheckPath = "/"
+healthcheckTimeout = 100 
