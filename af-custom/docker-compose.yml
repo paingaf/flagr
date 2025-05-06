@@ -1,0 +1,23 @@
+version: '3.6'
+
+services:
+  flagr:
+    # Builds using Dockerfile which combines flagr 1.1.18 with our custom UI changes
+    # This ensures the UI is built in Node.js 16 environment for compatibility
+    build:
+      # Context is set to parent directory (..) so that COPY commands in Dockerfile
+      # can access browser/flagr-ui directory from the repository root
+      context: ..
+      dockerfile: af-custom/Dockerfile
+    ports:
+      - "18000:18000"
+    env_file:
+      - ../browser/flagr-ui/.env.production
+    environment:
+      - HOST=0.0.0.0
+      - PORT=18000
+      - FLAGR_DB_DBDRIVER=sqlite3
+      - FLAGR_DB_DBCONNECTIONSTR=/data/demo_sqlite3.db
+    volumes:
+      # Mount a volume for data persistence
+      - ./data:/data 

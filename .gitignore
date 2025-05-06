@@ -28,3 +28,9 @@ _data
 coverage.txt
 /vendor
 .history
+
+.env.production
+.env.development
+.env
+
+af-custom/data
