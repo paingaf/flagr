@@ -1,0 +1,18 @@
+version: '3.6'
+
+services:
+  flagr-backend:
+    build:
+      context: ..
+      dockerfile: af-custom/Dockerfile
+    ports:
+      - "18000:18000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=18000
+      - FLAGR_DB_DBDRIVER=sqlite3
+      - FLAGR_DB_DBCONNECTIONSTR=/data/demo_sqlite3.db
+      - FLAGR_CORS_ENABLED=true
+      - FLAGR_CORS_ALLOWED_ORIGINS=http://localhost:8080
+    volumes:
+      - ./data:/data 

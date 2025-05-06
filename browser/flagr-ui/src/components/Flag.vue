@@ -1515,23 +1515,37 @@ export default {
         },
         async fetchLLMModels() {
             try {
-                const response = await tgAxios.get('/llm-models/names');
-                this.providers = response.data.map((model) => ({
-                    label: model,
-                    value: model,
-                }));
-
-                // Set mistral-large-2407 as default provider
-                const defaultModel = 'mistral-large-2407';
-                if (this.providers.some((p) => p.value === defaultModel)) {
-                    this.selectedProviders = [defaultModel];
-                    if (this.$refs.configDrawer) {
-                        const currentConfig = this.$refs.configDrawer.config;
-                        this.$refs.configDrawer.updateConfig({
-                            ...currentConfig,
-                            llmProvider: defaultModel,
-                        });
+                const response = await tgAxios.get('/llm/models');
+                // API returns {models: [{name, provider, isDefault}, ...], currentProvider, currentModel}
+                
+                // Safely handle the API response - check if models array exists
+                if (response.data && Array.isArray(response.data.models)) {
+                    this.providers = response.data.models.map((model) => ({
+                        label: model.name,
+                        value: model.name,
+                        isDefault: model.isDefault
+                    }));
+            
+                    // Find default models
+                    const defaultModels = this.providers
+                        .filter(p => p.isDefault)
+                        .map(p => p.value);
+                    
+                    if (defaultModels.length > 0) {
+                        // Use API-provided defaults
+                        this.selectedProviders = [defaultModels[0]];
+                        if (this.$refs.configDrawer) {
+                            const currentConfig = this.$refs.configDrawer.config;
+                            this.$refs.configDrawer.updateConfig({
+                                ...currentConfig,
+                                llmProvider: defaultModels[0],
+                            });
+                        }
                     }
+                } else {
+                    console.error('Unexpected API response format:', response.data);
+                    this.$message.warning('LLM models data format is unexpected');
+                    this.providers = [];
                 }
             } catch (error) {
                 this.$message.error('Failed to fetch LLM models');
