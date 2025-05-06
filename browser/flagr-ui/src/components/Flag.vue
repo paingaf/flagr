@@ -739,6 +739,7 @@
 import clone from 'lodash.clone';
 import Axios from 'axios';
 import debounce from 'lodash/debounce';
+import { tgAxios } from '@/services/api';
 
 import constants from '@/constants';
 import helpers from '@/helpers/helpers';
@@ -756,8 +757,6 @@ const OPERATOR_VALUE_TO_LABEL_MAP = operators.reduce((acc, el) => {
 const { sum, pluck, handleErr } = helpers;
 
 const { API_URL, FLAGR_UI_POSSIBLE_ENTITY_TYPES } = constants;
-
-const TG_API_URL = process.env.VUE_APP_TG_API_URL;
 
 const DEFAULT_SEGMENT = {
     description: '',
@@ -1216,7 +1215,7 @@ export default {
         },
         async fetchTGUsers() {
             try {
-                const response = await Axios.get(constants.TG_USERS_API);
+                const response = await tgAxios.get('/tg-users');
                 this.tgUsers = response.data;
             } catch (error) {
                 this.$message.error('Failed to fetch TG users');
@@ -1256,8 +1255,8 @@ export default {
         },
         async fetchAuthors() {
             try {
-                const response = await Axios.get(
-                    `${TG_API_URL}/categories/author-dags`
+                const response = await tgAxios.get(
+                    '/categories/author-dags'
                 );
                 // Extract unique authors from the response
                 this.authors = [
@@ -1320,7 +1319,7 @@ export default {
             }
 
             try {
-                const response = await Axios.post(`${TG_API_URL}/prompts`, {
+                const response = await tgAxios.post('/prompts', {
                     content: this.promptText,
                     name: this.newPromptName,
                 });
@@ -1384,8 +1383,8 @@ export default {
                 this.$set(variant, 'evaluating', true);
                 this.isAnyVariantEvaluating = true;
 
-                const response = await Axios.post(
-                    `${TG_API_URL}/simulation/relevance-score`,
+                const response = await tgAxios.post(
+                    '/simulation/relevance-score',
                     variant.attachment
                 );
 
@@ -1404,8 +1403,8 @@ export default {
         },
         async searchUsers(queryString, callback) {
             try {
-                const response = await Axios.get(
-                    `${TG_API_URL}/tg-users/preferences`,
+                const response = await tgAxios.get(
+                    '/tg-users/preferences',
                     {
                         params: {
                             ...(queryString &&
@@ -1425,8 +1424,8 @@ export default {
         },
         async searchAuthors(queryString, callback) {
             try {
-                const response = await Axios.get(
-                    `${TG_API_URL}/categories/author-dags`,
+                const response = await tgAxios.get(
+                    '/categories/author-dags',
                     {
                         params: {
                             ...(queryString &&
@@ -1492,8 +1491,8 @@ export default {
                 const variantA = this.flag.variants[0];
                 const variantB = this.flag.variants[1];
 
-                const response = await Axios.post(
-                    `${TG_API_URL}/simulation/ab-test`,
+                const response = await tgAxios.post(
+                    '/simulation/ab-test',
                     {
                         configA: variantA.attachment,
                         configB: variantB.attachment,
@@ -1516,9 +1515,7 @@ export default {
         },
         async fetchLLMModels() {
             try {
-                const response = await Axios.get(
-                    `${TG_API_URL}/llm-models/names`
-                );
+                const response = await tgAxios.get('/llm-models/names');
                 this.providers = response.data.map((model) => ({
                     label: model,
                     value: model,
@@ -1544,8 +1541,8 @@ export default {
         async runCategorization() {
             this.isCategorizing = true;
             try {
-                const response = await Axios.post(
-                    `${TG_API_URL}/simulation/categorization`,
+                const response = await tgAxios.post(
+                    '/simulation/categorization',
                     {
                         CHAIN_ID: this.chainId,
                         TWEET_URL: this.dagText,
@@ -1565,7 +1562,7 @@ export default {
         },
         async fetchPrompts() {
             try {
-                const response = await Axios.get(`${TG_API_URL}/prompts`);
+                const response = await tgAxios.get('/prompts');
                 this.prompts = response.data;
 
                 // Find and select the "Default" prompt
@@ -1597,8 +1594,8 @@ export default {
         this.fetchPrompts();
 
         try {
-            const response = await fetch(`${TG_API_URL}/app-config`);
-            const data = await response.json();
+            const response = await tgAxios.get('/app-config');
+            const data = response.data;
 
             // Initialize configuration with any existing values
             if (this.$refs.configDrawer) {
