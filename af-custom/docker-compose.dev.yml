@@ -15,4 +15,6 @@ services:
       - FLAGR_CORS_ENABLED=true
       - FLAGR_CORS_ALLOWED_ORIGINS=http://localhost:8080
     volumes:
-      - ./data:/data 
+      - ./data:/data
+      # Mount env variables file as volume for easy updating
+      - ../browser/flagr-ui/.env.development:/browser/flagr-ui/.env:ro 
