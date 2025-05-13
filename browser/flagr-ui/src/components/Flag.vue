@@ -314,6 +314,15 @@
                                                 width="180"
                                             ></el-table-column>
                                             <el-table-column
+                                                prop="startedAt"
+                                                label="Started At"
+                                                width="180"
+                                            >
+                                                <template slot-scope="scope">
+                                                    {{ scope.row.startedAt ? new Date(scope.row.startedAt).toLocaleString() : 'N/A' }}
+                                                </template>
+                                            </el-table-column>
+                                            <el-table-column
                                                 prop="totalCost"
                                                 label="Total Cost"
                                                 width="120"
