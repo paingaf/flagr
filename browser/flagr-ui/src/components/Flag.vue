@@ -312,6 +312,22 @@
                                     >
                                         <div class="result-header">
                                             <h4>Categorization Results</h4>
+                                            <div class="result-actions">
+                                                <el-button 
+                                                    size="small" 
+                                                    @click="expandAllRuns" 
+                                                    type="text"
+                                                >
+                                                    Expand All
+                                                </el-button>
+                                                <el-button 
+                                                    size="small" 
+                                                    @click="collapseAllRuns" 
+                                                    type="text"
+                                                >
+                                                    Collapse All
+                                                </el-button>
+                                            </div>
                                         </div>
                                         
                                         <!-- Most recent run first -->
@@ -320,99 +336,117 @@
                                             :key="runIndex" 
                                             class="categorization-run"
                                         >
-                                            <div class="run-header">
-                                                <h5>Run #{{ run.metadata.runNumber }} - {{ new Date(run.metadata.timestamp).toLocaleString() }}</h5>
-                                            </div>
-                                            
-                                            <!-- Table for this run's results -->
-                                            <el-table 
-                                                :data="run.results" 
-                                                style="width: 100%; margin-bottom: 20px;"
+                                            <el-collapse 
+                                                v-model="expandedRuns" 
+                                                @change="handleRunExpand"
                                             >
-                                                <el-table-column 
-                                                    label="#" 
-                                                    width="60"
-                                                    prop="runNumber"
-                                                ></el-table-column>
-                                                
-                                                <el-table-column
-                                                    prop="modelName"
-                                                    label="Model Name"
-                                                    width="150"
-                                                ></el-table-column>
-                                                
-                                                <el-table-column
-                                                    prop="startedAt"
-                                                    label="Started At"
-                                                    width="180"
-                                                >
-                                                    <template slot-scope="scope">
-                                                        {{ scope.row.startedAt ? new Date(scope.row.startedAt).toLocaleString() : 'N/A' }}
-                                                    </template>
-                                                </el-table-column>
-                                                
-                                                <el-table-column
-                                                    prop="totalCost"
-                                                    label="Total Cost"
-                                                    width="120"
-                                                >
-                                                    <template slot-scope="scope">
-                                                        {{ scope.row.totalCost ? scope.row.totalCost.toFixed(4) : '0' }}
-                                                    </template>
-                                                </el-table-column>
-                                                
-                                                <el-table-column
-                                                    prop="timeTakenMs"
-                                                    label="Time (ms)"
-                                                    width="120"
-                                                ></el-table-column>
-                                                
-                                                <el-table-column label="Categories">
-                                                    <template slot-scope="scope">
-                                                        <div
-                                                            v-for="(
-                                                                categories, level
-                                                            ) in scope.row.categoryResponse || {}"
-                                                            :key="level"
-                                                        >
-                                                            <strong
-                                                                >{{
-                                                                    level
-                                                                }}:</strong
-                                                            >
-                                                            {{
-                                                                Array.isArray(categories) ? categories.join(', ') : categories
-                                                            }}
-                                                        </div>
-                                                        <div v-if="!scope.row.categoryResponse">No categories available</div>
-                                                    </template>
-                                                </el-table-column>
-                                                
-                                                <el-table-column
-                                                    label="Prompt Name"
-                                                    width="150"
-                                                >
-                                                    <template slot-scope="scope">
-                                                        <div
-                                                            style="
-                                                                white-space: pre-wrap;
-                                                                word-break: break-word;
-                                                            "
-                                                        >
-                                                            {{
-                                                                scope.row.metadata && scope.row.metadata.promptName 
-                                                                    ? (scope.row.metadata.promptName.length > 50
-                                                                        ? scope.row.metadata.promptName.substring(0, 50) + '...'
-                                                                        : scope.row.metadata.promptName)
-                                                                    : 'No prompt name available'
-                                                            }}
+                                                <el-collapse-item :name="'run-' + run.metadata.runNumber">
+                                                    <template slot="title">
+                                                        <div class="run-header-title">
+                                                            Run #{{ run.metadata.runNumber }} - {{ new Date(run.metadata.timestamp).toLocaleString() }}
                                                         </div>
                                                     </template>
-                                                </el-table-column>
-                                            </el-table>
-                                            
-                                            <!-- JSON view for this run -->
-                                            <pre class="result-json">{{ JSON.stringify(run.results, null, 2) }}</pre>
+                                                    
+                                                    <!-- Table for this run's results -->
+                                                    <el-table 
+                                                        :data="run.results" 
+                                                        style="width: 100%; margin-bottom: 20px;"
+                                                    >
+                                                        <el-table-column 
+                                                            label="#" 
+                                                            width="60"
+                                                            prop="runNumber"
+                                                        ></el-table-column>
+                                                        
+                                                        <el-table-column
+                                                            prop="modelName"
+                                                            label="Model Name"
+                                                            width="150"
+                                                        ></el-table-column>
+                                                        
+                                                        <el-table-column
+                                                            prop="startedAt"
+                                                            label="Started At"
+                                                            width="180"
+                                                        >
+                                                            <template slot-scope="scope">
+                                                                {{ scope.row.startedAt ? new Date(scope.row.startedAt).toLocaleString() : 'N/A' }}
+                                                            </template>
+                                                        </el-table-column>
+                                                        
+                                                        <el-table-column
+                                                            prop="totalCost"
+                                                            label="Total Cost"
+                                                            width="120"
+                                                        >
+                                                            <template slot-scope="scope">
+                                                                {{ scope.row.totalCost ? scope.row.totalCost.toFixed(4) : '0' }}
+                                                            </template>
+                                                        </el-table-column>
+                                                        
+                                                        <el-table-column
+                                                            prop="timeTakenMs"
+                                                            label="Time (ms)"
+                                                            width="120"
+                                                        ></el-table-column>
+                                                        
+                                                        <el-table-column label="Categories">
+                                                            <template slot-scope="scope">
+                                                                <div
+                                                                    v-for="(
+                                                                        categories, level
+                                                                    ) in scope.row.categoryResponse || {}"
+                                                                    :key="level"
+                                                                >
+                                                                    <strong
+                                                                        >{{
+                                                                            level
+                                                                        }}:</strong
+                                                                    >
+                                                                    {{
+                                                                        Array.isArray(categories) ? categories.join(', ') : categories
+                                                                    }}
+                                                                </div>
+                                                                <div v-if="!scope.row.categoryResponse">No categories available</div>
+                                                            </template>
+                                                        </el-table-column>
+                                                        
+                                                        <el-table-column
+                                                            label="Prompt Name"
+                                                            width="150"
+                                                        >
+                                                            <template slot-scope="scope">
+                                                                <div
+                                                                    style="
+                                                                        white-space: pre-wrap;
+                                                                        word-break: break-word;
+                                                                    "
+                                                                >
+                                                                    {{
+                                                                        scope.row.metadata && scope.row.metadata.promptName 
+                                                                            ? (scope.row.metadata.promptName.length > 50
+                                                                                ? scope.row.metadata.promptName.substring(0, 50) + '...'
+                                                                                : scope.row.metadata.promptName)
+                                                                            : 'No prompt name available'
+                                                                    }}
+                                                                </div>
+                                                            </template>
+                                                        </el-table-column>
+                                                    </el-table>
+                                                    
+                                                    <!-- JSON view for this run -->
+                                                    <div class="raw-response-section">
+                                                        <div class="raw-response-header">
+                                                            <h5>Raw Response</h5>
+                                                        </div>
+                                                        <el-collapse v-model="expandedJson">
+                                                            <el-collapse-item :name="'json-' + run.metadata.runNumber">
+                                                                <pre class="result-json">{{ JSON.stringify(run.results, null, 2) }}</pre>
+                                                            </el-collapse-item>
+                                                        </el-collapse>
+                                                    </div>
+                                                </el-collapse-item>
+                                            </el-collapse>
                                             
                                             <!-- Divider between runs -->
                                             <el-divider v-if="runIndex < categorizationRuns.length - 1"></el-divider>
@@ -890,6 +924,9 @@ export default {
             newPromptName: '',
             originalPromptText: '',
             selectedProvider: '',
+            expandedRuns: [],
+            expandedJson: [],
+            pendingRuns: [],
         };
     },
     computed: {
@@ -1679,6 +1716,25 @@ export default {
                 // For backward compatibility, also update categorizationResult
                 this.categorizationResult = enhancedResults;
                 
+                // Expand the latest run by default
+                if (!this.expandedRuns.includes('run-' + currentRunNumber)) {
+                    this.expandedRuns.push('run-' + currentRunNumber);
+                }
+                
+                // Save to MongoDB via TG API
+                try {
+                    await tgAxios.post('/simulation/flagr/categorization-runs', {
+                        flagId: this.flagId,
+                        run: newRun
+                    });
+                } catch (error) {
+                    console.error('Failed to save categorization run to database:', error);
+                    // If we have pendingRuns in data, add this run to it
+                    if (this.pendingRuns) {
+                        this.pendingRuns.push(newRun);
+                    }
+                }
+                
                 this.$message.success('Categorization completed');
             } catch (error) {
                 this.$message.error('Failed to run categorization');
@@ -1707,12 +1763,63 @@ export default {
                 console.error('Error fetching prompts:', error);
             }
         },
-        clearCategorizationHistory() {
+        async clearCategorizationHistory() {
             if (confirm("Are you sure you want to clear all categorization results?")) {
-                this.categorizationRuns = [];
-                this.categorizationResult = null;
-                this.categorizationRunCount = 0;
-                this.$message.success('Categorization history cleared');
+                try {
+                    // Delete from MongoDB via TG API
+                    await tgAxios.delete(`/simulation/flagr/categorization-runs/${this.flagId}`);
+                    
+                    // Clear local state
+                    this.categorizationRuns = [];
+                    this.categorizationResult = null;
+                    this.categorizationRunCount = 0;
+                    this.$message.success('Categorization history cleared');
+                } catch (error) {
+                    console.error('Failed to clear categorization history from database:', error);
+                    // Still clear local state even if API call fails
+                    this.categorizationRuns = [];
+                    this.categorizationResult = null;
+                    this.categorizationRunCount = 0;
+                    this.$message.warning('Categorization history cleared locally but failed to clear from database');
+                }
+            }
+        },
+        expandAllRuns() {
+            this.expandedRuns = this.categorizationRuns.map(run => 'run-' + run.metadata.runNumber);
+            this.expandedJson = this.categorizationRuns.map(run => 'json-' + run.metadata.runNumber);
+        },
+        collapseAllRuns() {
+            this.expandedRuns = [];
+            this.expandedJson = [];
+        },
+        handleRunExpand(expandedNames) {
+            console.log('Expanded runs:', expandedNames);
+        },
+        async syncPendingRuns() {
+            if (!this.pendingRuns || this.pendingRuns.length === 0) return;
+            
+            const runsToSync = [...this.pendingRuns];
+            this.pendingRuns = [];
+            
+            let failedCount = 0;
+            
+            for (const run of runsToSync) {
+                try {
+                    await tgAxios.post('/simulation/flagr/categorization-runs', {
+                        flagId: this.flagId,
+                        run: run
+                    });
+                } catch (error) {
+                    failedCount++;
+                    this.pendingRuns.push(run);
+                    console.error('Failed to sync run:', error);
+                }
+            }
+            
+            if (failedCount > 0) {
+                this.$message.warning(`${failedCount} runs failed to sync and will be retried later`);
+            } else if (runsToSync.length > 0) {
+                this.$message.success(`Successfully synced ${runsToSync.length} pending runs`);
             }
         },
     },
@@ -1727,6 +1834,35 @@ export default {
         this.fetchAuthors();
         this.fetchLLMModels();
         this.fetchPrompts();
+
+        // Try to sync any pending runs
+        if (this.pendingRuns && this.pendingRuns.length > 0) {
+            this.syncPendingRuns();
+        }
+
+        // Load categorization history from MongoDB
+        try {
+            const response = await tgAxios.get(`/simulation/flagr/categorization-runs/${this.flagId}`);
+            if (response.data && Array.isArray(response.data)) {
+                this.categorizationRuns = response.data;
+                if (this.categorizationRuns.length > 0) {
+                    // Get the highest run number to continue counting from there
+                    this.categorizationRunCount = Math.max(
+                        ...this.categorizationRuns.map(run => 
+                            run.metadata && run.metadata.runNumber 
+                                ? run.metadata.runNumber 
+                                : 0
+                        ), 
+                        0
+                    );
+                    
+                    // Set the most recent run as the current result
+                    this.categorizationResult = this.categorizationRuns[0].results;
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load categorization history:', error);
+        }
 
         try {
             const response = await tgAxios.get('/app-config');
@@ -2027,7 +2163,63 @@ ol.constraints-inner {
 }
 
 .result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+}
+
+.result-header h4 {
+    margin: 0;
+    font-size: 16px;
+    color: #303133;
+}
+
+.result-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.run-header-title {
+    color: #606266;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.raw-response-section {
+    margin-top: 15px;
+    border-top: 1px dashed #ebeef5;
+    padding-top: 15px;
+}
+
+.raw-response-header {
     margin-bottom: 10px;
+}
+
+.raw-response-header h5 {
+    margin: 0;
+    font-size: 14px;
+    color: #606266;
+}
+
+.clear-history-button {
+    min-width: 120px;
+}
+
+/* Custom styling for the collapse elements */
+.categorization-run .el-collapse-item__header {
+    background-color: #f5f7fa;
+    border-radius: 4px;
+    padding: 0 10px;
+    font-weight: normal;
+}
+
+.categorization-run .el-collapse-item__wrap {
+    background-color: #ffffff;
+    border-radius: 0 0 4px 4px;
 }
 
 .result-json {
@@ -2043,7 +2235,6 @@ ol.constraints-inner {
 .prompt-save-container {
     margin-top: 20px;
     display: flex;
-    align-items: center;
     gap: 10px;
 }
 
@@ -2063,26 +2254,13 @@ ol.constraints-inner {
 }
 
 .categorization-run {
-    margin-bottom: 30px;
+    margin-bottom: 15px;
 }
 
-.run-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-    background-color: #f5f7fa;
-    padding: 10px;
-    border-radius: 4px;
-}
-
-.run-header h5 {
-    margin: 0;
-    color: #606266;
-    font-weight: bold;
-}
-
-.clear-history-button {
-    min-width: 120px;
+.raw-response-section .el-collapse-item__header {
+    background-color: #f9f9f9;
+    padding: 0 10px;
+    font-size: 13px;
+    color: #909399;
 }
 </style>

@@ -213,6 +213,7 @@
 
 <script>
 import Axios from 'axios';
+import { tgAxios } from '@/services/api';
 
 import constants from '@/constants';
 import Spinner from '@/components/Spinner';
@@ -310,6 +311,14 @@ export default {
 
                 flag._new = true;
                 this.flags.unshift(flag);
+                
+                // Store in MongoDB via TG API
+                tgAxios.post('/simulation/flagr/flags-meta', {
+                    flagId: flag.id,
+                    description: flag.description,
+                    metadata: {}
+                }).catch(err => console.error('Failed to save flag metadata:', err));
+                
             }, handleErr.bind(this));
         },
         restoreFlag(row) {
