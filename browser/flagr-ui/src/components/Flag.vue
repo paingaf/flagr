@@ -1298,9 +1298,8 @@ export default {
             }
         },
         handlePromptInput(value) {
-            if (this.selectedPrompt) {
-                this.isPromptModified = value !== this.originalPromptText;
-            }
+            // Always check if the prompt has been modified, even if no prompt is selected
+            this.isPromptModified = value !== this.originalPromptText;
 
             if (this.$refs.configDrawer) {
                 const currentConfig = this.$refs.configDrawer.config;
@@ -1656,6 +1655,7 @@ export default {
                 // Set categoryMatchPrompt from API response
                 if (data.categoryMatchPrompt) {
                     this.promptText = data.categoryMatchPrompt;
+                    this.originalPromptText = data.categoryMatchPrompt;
                     newConfig.categoryMatchPrompt = data.categoryMatchPrompt;
                 }
 
