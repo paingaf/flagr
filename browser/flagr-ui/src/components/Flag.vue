@@ -318,16 +318,9 @@
                                                 label="Total Cost"
                                                 width="120"
                                             >
-                                                <template> 0 </template>
-                                                <!--
                                                 <template slot-scope="scope">
-                                                    {{
-                                                        scope.row.totalCost.toFixed(
-                                                            4
-                                                        )
-                                                    }}
+                                                    {{ scope.row.totalCost ? scope.row.totalCost.toFixed(4) : '0' }}
                                                 </template>
-                                                -->
                                             </el-table-column>
                                             <el-table-column
                                                 prop="timeTakenMs"
@@ -339,8 +332,7 @@
                                                     <div
                                                         v-for="(
                                                             categories, level
-                                                        ) in scope.row
-                                                            .categoryResponse"
+                                                        ) in scope.row.categoryResponse || {}"
                                                         :key="level"
                                                     >
                                                         <strong
@@ -349,11 +341,10 @@
                                                             }}:</strong
                                                         >
                                                         {{
-                                                            categories.join(
-                                                                ', '
-                                                            )
+                                                            Array.isArray(categories) ? categories.join(', ') : categories
                                                         }}
                                                     </div>
+                                                    <div v-if="!scope.row.categoryResponse">No categories available</div>
                                                 </template>
                                             </el-table-column>
                                             <el-table-column
@@ -368,16 +359,11 @@
                                                         "
                                                     >
                                                         {{
-                                                            scope.row.metadata
-                                                                .promptName
-                                                                .length > 50
-                                                                ? scope.row.metadata.promptName.substring(
-                                                                      0,
-                                                                      50
-                                                                  ) + '...'
-                                                                : scope.row
-                                                                      .metadata
-                                                                      .promptName
+                                                            scope.row.metadata && scope.row.metadata.promptName 
+                                                                ? (scope.row.metadata.promptName.length > 50
+                                                                    ? scope.row.metadata.promptName.substring(0, 50) + '...'
+                                                                    : scope.row.metadata.promptName)
+                                                                : 'No prompt name available'
                                                         }}
                                                     </div>
                                                 </template>
