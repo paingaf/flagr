@@ -340,10 +340,10 @@
                                                 v-model="expandedRuns" 
                                                 @change="handleRunExpand"
                                             >
-                                                <el-collapse-item :name="'run-' + run.metadata.runNumber">
+                                                <el-collapse-item :name="'run-' + (run.metadata && run.metadata.runNumber ? run.metadata.runNumber : 0)">
                                                     <template slot="title">
                                                         <div class="run-header-title">
-                                                            Run #{{ run.metadata.runNumber }} - {{ new Date(run.metadata.timestamp).toLocaleString() }}
+                                                            Run #{{ run.metadata && run.metadata.runNumber ? run.metadata.runNumber : 0 }} - {{ run.metadata && run.metadata.timestamp ? new Date(run.metadata.timestamp).toLocaleString() : 'Unknown date' }}
                                                         </div>
                                                     </template>
                                                     
@@ -440,7 +440,7 @@
                                                             <h5>Raw Response</h5>
                                                         </div>
                                                         <el-collapse v-model="expandedJson">
-                                                            <el-collapse-item :name="'json-' + run.metadata.runNumber">
+                                                            <el-collapse-item :name="'json-' + (run.metadata && run.metadata.runNumber ? run.metadata.runNumber : 0)">
                                                                 <pre class="result-json">{{ JSON.stringify(run.results, null, 2) }}</pre>
                                                             </el-collapse-item>
                                                         </el-collapse>
@@ -1710,6 +1710,12 @@ export default {
                     metadata: runMetadata
                 };
                 
+                // Log the complete run structure for backend reference
+                console.log('Categorization run structure for MongoDB:', {
+                    flagId: this.flagId,
+                    run: newRun
+                });
+                
                 // Add to the beginning of the array (newest first)
                 this.categorizationRuns.unshift(newRun);
                 
@@ -1785,8 +1791,14 @@ export default {
             }
         },
         expandAllRuns() {
-            this.expandedRuns = this.categorizationRuns.map(run => 'run-' + run.metadata.runNumber);
-            this.expandedJson = this.categorizationRuns.map(run => 'json-' + run.metadata.runNumber);
+            this.expandedRuns = this.categorizationRuns.map(run => {
+                const runNumber = run.metadata && run.metadata.runNumber ? run.metadata.runNumber : 0;
+                return 'run-' + runNumber;
+            });
+            this.expandedJson = this.categorizationRuns.map(run => {
+                const runNumber = run.metadata && run.metadata.runNumber ? run.metadata.runNumber : 0;
+                return 'json-' + runNumber;
+            });
         },
         collapseAllRuns() {
             this.expandedRuns = [];
@@ -1843,8 +1855,17 @@ export default {
         // Load categorization history from MongoDB
         try {
             const response = await tgAxios.get(`/simulation/flagr/categorization-runs/${this.flagId}`);
+            console.log('GET /simulation/flagr/categorization-runs response:', {
+                flagId: this.flagId,
+                responseData: response.data,
+                responseStatus: response.status,
+                responseHeaders: response.headers
+            });
+            
             if (response.data && Array.isArray(response.data)) {
-                this.categorizationRuns = response.data;
+                // Extract the run objects from the nested structure
+                this.categorizationRuns = response.data.map(item => item.run || item);
+                
                 if (this.categorizationRuns.length > 0) {
                     // Get the highest run number to continue counting from there
                     this.categorizationRunCount = Math.max(
