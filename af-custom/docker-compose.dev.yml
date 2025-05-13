@@ -1,4 +1,4 @@
-version: '3.6'
+name: af-flagr
 
 services:
   flagr-backend:
@@ -17,4 +17,42 @@ services:
     volumes:
       - ./data:/data
       # Mount env variables file as volume for easy updating
-      - ../browser/flagr-ui/.env.development:/browser/flagr-ui/.env:ro 
+      - ../browser/flagr-ui/.env.development:/browser/flagr-ui/.env:ro
+  neo4j-test:
+    image: neo4j:5.26
+    ports:
+      - '7484:7474'
+      - '7697:7687'
+    environment:
+      - NEO4J_AUTH=neo4j/password
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      - NEO4J_initial_dbms_default__database=neo4j
+      - NEO4J_dbms_security_procedures_unrestricted=apoc.*
+      - NEO4J_dbms_security_procedures_allowlist=apoc.*
+      - NEO4J_server_config_strict__validation_enabled=false
+      - NEO4J_dbms_databases_default__to__started=true
+      - NEO4J_dbms_databases_startup__db__timeout=300s
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - ./plugins:/var/lib/neo4j/plugins
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'cypher-shell',
+          '-u',
+          '${NEO4J_USERNAME:-neo4j}',
+          '-p',
+          '${NEO4J_PASSWORD:-password}',
+          '--non-interactive',
+          'RETURN 1;',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s 
+      
+volumes:
+  neo4j_data:
+  neo4j_logs:

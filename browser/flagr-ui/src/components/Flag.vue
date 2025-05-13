@@ -846,7 +846,9 @@ export default {
             debounceSearchUsers: null,
             debounceSearchAuthors: null,
             providers: [],
+            providerObjects: [],
             selectedProviders: [],
+            selectedProviderObjects: [],
             prompts: [],
             selectedPrompt: '',
             isSimulating: false,
@@ -1454,6 +1456,14 @@ export default {
 
                 // For Categorization tab (multiple select)
                 if (isMultipleSelect) {
+                    // Store the selected names (for UI)
+                    this.selectedProviders = values;
+                    
+                    // Map names to complete objects
+                    this.selectedProviderObjects = values.map(name => 
+                        this.providerObjects.find(obj => obj.name === name)
+                    );
+                    
                     this.$refs.configDrawer.updateConfig({
                         ...currentConfig,
                         llmProvider: values.join(','),
@@ -1461,6 +1471,9 @@ export default {
                 }
                 // For Matching Scores tab (single select)
                 else {
+                    // For single select, update both the name and object
+                    this.selectedProvider = values;
+                    
                     this.$refs.configDrawer.updateConfig({
                         ...currentConfig,
                         llmProvider: values,
@@ -1520,6 +1533,10 @@ export default {
                 
                 // Safely handle the API response - check if models array exists
                 if (response.data && Array.isArray(response.data.models)) {
+                    // Store complete model objects
+                    this.providerObjects = response.data.models;
+                    
+                    // Create simplified objects for UI display
                     this.providers = response.data.models.map((model) => ({
                         label: model.name,
                         value: model.name,
@@ -1534,6 +1551,11 @@ export default {
                     if (defaultModels.length > 0) {
                         // Use API-provided defaults
                         this.selectedProviders = [defaultModels[0]];
+                        // Set corresponding complete object
+                        this.selectedProviderObjects = [
+                            this.providerObjects.find(obj => obj.name === defaultModels[0])
+                        ];
+                        
                         if (this.$refs.configDrawer) {
                             const currentConfig = this.$refs.configDrawer.config;
                             this.$refs.configDrawer.updateConfig({
@@ -1546,6 +1568,7 @@ export default {
                     console.error('Unexpected API response format:', response.data);
                     this.$message.warning('LLM models data format is unexpected');
                     this.providers = [];
+                    this.providerObjects = [];
                 }
             } catch (error) {
                 this.$message.error('Failed to fetch LLM models');
@@ -1555,15 +1578,29 @@ export default {
         async runCategorization() {
             this.isCategorizing = true;
             try {
+                // API expects objects with 'modelName' property instead of 'name'
+                // Map the provider objects to the format expected by the API
+                const mappedProviders = this.selectedProviderObjects.map(provider => ({
+                    modelName: provider.name, // Transform 'name' to 'modelName' for API compatibility
+                    provider: provider.provider,
+                    isDefault: provider.isDefault
+                    // Other properties from the original object are preserved
+                }));
+
+                const requestPayload = {
+                    CHAIN_ID: this.chainId,
+                    TWEET_URL: this.dagText,
+                    categoryMatchPrompt: this.promptText,
+                    llmProviders: mappedProviders,
+                    promptId: this.selectedPrompt || null,
+                };
+                
+                // Log the request payload for debugging
+                console.log('Categorization request payload:', requestPayload);
+
                 const response = await tgAxios.post(
                     '/simulation/categorization',
-                    {
-                        CHAIN_ID: this.chainId,
-                        TWEET_URL: this.dagText,
-                        categoryMatchPrompt: this.promptText,
-                        llmProviders: this.selectedProviders,
-                        promptId: this.selectedPrompt || null,
-                    }
+                    requestPayload
                 );
                 this.categorizationResult = response.data;
                 this.$message.success('Categorization completed');

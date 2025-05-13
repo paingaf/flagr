@@ -6,7 +6,8 @@
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint",
-    "watch": "vue-cli-service build --watch"
+    "watch": "vue-cli-service build --watch",
+    "dev": "echo \"⚠️  WARNING: This project requires Node.js v16! Current version: $(node -v). Please run: nvm use 16\" && read -p \"Press Enter to continue or Ctrl+C to cancel...\" && cd ../.. && docker-compose -f af-custom/docker-compose.dev.yml up -d && cd browser/flagr-ui && npm run serve"
   },
   "dependencies": {
     "@iktakahiro/markdown-it-katex": "^4.0.0",
