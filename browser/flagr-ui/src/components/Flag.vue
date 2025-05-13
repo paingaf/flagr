@@ -284,107 +284,139 @@
                                 </div>
 
                                 <div class="submit-container">
-                                    <el-button
-                                        type="primary"
-                                        @click="runCategorization"
-                                        :loading="isCategorizing"
-                                        class="width--full"
-                                    >
-                                        Run Categorization
-                                    </el-button>
+                                    <div class="categorization-controls">
+                                        <el-button
+                                            type="primary"
+                                            @click="runCategorization"
+                                            :loading="isCategorizing"
+                                            class="width--full"
+                                        >
+                                            Run Categorization
+                                        </el-button>
+                                        
+                                        <el-button
+                                            v-if="categorizationRuns.length > 0"
+                                            type="danger"
+                                            plain
+                                            @click="clearCategorizationHistory"
+                                            class="clear-history-button"
+                                        >
+                                            Clear History
+                                        </el-button>
+                                    </div>
 
-                                    <!-- Categorization Result -->
+                                    <!-- Categorization Results -->
                                     <div
-                                        v-if="categorizationResult"
+                                        v-if="categorizationRuns.length"
                                         class="categorization-result"
                                     >
                                         <div class="result-header">
-                                            <h4>Categorization Result</h4>
+                                            <h4>Categorization Results</h4>
                                         </div>
-                                        <el-table
-                                            :data="categorizationResult"
-                                            style="
-                                                width: 100%;
-                                                margin-bottom: 20px;
-                                            "
+                                        
+                                        <!-- Most recent run first -->
+                                        <div 
+                                            v-for="(run, runIndex) in categorizationRuns" 
+                                            :key="runIndex" 
+                                            class="categorization-run"
                                         >
-                                            <el-table-column
-                                                prop="modelName"
-                                                label="Model Name"
-                                                width="180"
-                                            ></el-table-column>
-                                            <el-table-column
-                                                prop="startedAt"
-                                                label="Started At"
-                                                width="180"
+                                            <div class="run-header">
+                                                <h5>Run #{{ run.metadata.runNumber }} - {{ new Date(run.metadata.timestamp).toLocaleString() }}</h5>
+                                            </div>
+                                            
+                                            <!-- Table for this run's results -->
+                                            <el-table 
+                                                :data="run.results" 
+                                                style="width: 100%; margin-bottom: 20px;"
                                             >
-                                                <template slot-scope="scope">
-                                                    {{ scope.row.startedAt ? new Date(scope.row.startedAt).toLocaleString() : 'N/A' }}
-                                                </template>
-                                            </el-table-column>
-                                            <el-table-column
-                                                prop="totalCost"
-                                                label="Total Cost"
-                                                width="120"
-                                            >
-                                                <template slot-scope="scope">
-                                                    {{ scope.row.totalCost ? scope.row.totalCost.toFixed(4) : '0' }}
-                                                </template>
-                                            </el-table-column>
-                                            <el-table-column
-                                                prop="timeTakenMs"
-                                                label="Time (ms)"
-                                                width="120"
-                                            ></el-table-column>
-                                            <el-table-column label="Categories">
-                                                <template slot-scope="scope">
-                                                    <div
-                                                        v-for="(
-                                                            categories, level
-                                                        ) in scope.row.categoryResponse || {}"
-                                                        :key="level"
-                                                    >
-                                                        <strong
-                                                            >{{
-                                                                level
-                                                            }}:</strong
+                                                <el-table-column 
+                                                    label="#" 
+                                                    width="60"
+                                                    prop="runNumber"
+                                                ></el-table-column>
+                                                
+                                                <el-table-column
+                                                    prop="modelName"
+                                                    label="Model Name"
+                                                    width="150"
+                                                ></el-table-column>
+                                                
+                                                <el-table-column
+                                                    prop="startedAt"
+                                                    label="Started At"
+                                                    width="180"
+                                                >
+                                                    <template slot-scope="scope">
+                                                        {{ scope.row.startedAt ? new Date(scope.row.startedAt).toLocaleString() : 'N/A' }}
+                                                    </template>
+                                                </el-table-column>
+                                                
+                                                <el-table-column
+                                                    prop="totalCost"
+                                                    label="Total Cost"
+                                                    width="120"
+                                                >
+                                                    <template slot-scope="scope">
+                                                        {{ scope.row.totalCost ? scope.row.totalCost.toFixed(4) : '0' }}
+                                                    </template>
+                                                </el-table-column>
+                                                
+                                                <el-table-column
+                                                    prop="timeTakenMs"
+                                                    label="Time (ms)"
+                                                    width="120"
+                                                ></el-table-column>
+                                                
+                                                <el-table-column label="Categories">
+                                                    <template slot-scope="scope">
+                                                        <div
+                                                            v-for="(
+                                                                categories, level
+                                                            ) in scope.row.categoryResponse || {}"
+                                                            :key="level"
                                                         >
-                                                        {{
-                                                            Array.isArray(categories) ? categories.join(', ') : categories
-                                                        }}
-                                                    </div>
-                                                    <div v-if="!scope.row.categoryResponse">No categories available</div>
-                                                </template>
-                                            </el-table-column>
-                                            <el-table-column
-                                                label="Prompt Name"
-                                                width="300"
-                                            >
-                                                <template slot-scope="scope">
-                                                    <div
-                                                        style="
-                                                            white-space: pre-wrap;
-                                                            word-break: break-word;
-                                                        "
-                                                    >
-                                                        {{
-                                                            scope.row.metadata && scope.row.metadata.promptName 
-                                                                ? (scope.row.metadata.promptName.length > 50
-                                                                    ? scope.row.metadata.promptName.substring(0, 50) + '...'
-                                                                    : scope.row.metadata.promptName)
-                                                                : 'No prompt name available'
-                                                        }}
-                                                    </div>
-                                                </template>
-                                            </el-table-column>
-                                        </el-table>
-                                        <pre class="result-json">{{
-                                            JSON.stringify(
-                                                categorizationResult,
-                                                null,
-                                                2
-                                            )
-                                        }}</pre>
+                                                            <strong
+                                                                >{{
+                                                                    level
+                                                                }}:</strong
+                                                            >
+                                                            {{
+                                                                Array.isArray(categories) ? categories.join(', ') : categories
+                                                            }}
+                                                        </div>
+                                                        <div v-if="!scope.row.categoryResponse">No categories available</div>
+                                                    </template>
+                                                </el-table-column>
+                                                
+                                                <el-table-column
+                                                    label="Prompt Name"
+                                                    width="150"
+                                                >
+                                                    <template slot-scope="scope">
+                                                        <div
+                                                            style="
+                                                                white-space: pre-wrap;
+                                                                word-break: break-word;
+                                                            "
+                                                        >
+                                                            {{
+                                                                scope.row.metadata && scope.row.metadata.promptName 
+                                                                    ? (scope.row.metadata.promptName.length > 50
+                                                                        ? scope.row.metadata.promptName.substring(0, 50) + '...'
+                                                                        : scope.row.metadata.promptName)
+                                                                    : 'No prompt name available'
+                                                            }}
+                                                        </div>
+                                                    </template>
+                                                </el-table-column>
+                                            </el-table>
+                                            
+                                            <!-- JSON view for this run -->
+                                            <pre class="result-json">{{ JSON.stringify(run.results, null, 2) }}</pre>
+                                            
+                                            <!-- Divider between runs -->
+                                            <el-divider v-if="runIndex < categorizationRuns.length - 1"></el-divider>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -851,6 +883,8 @@ export default {
             abTestResult: null,
             isCategorizing: false,
             categorizationResult: null,
+            categorizationRuns: [],
+            categorizationRunCount: 0,
             isAnyVariantEvaluating: false,
             isPromptModified: false,
             newPromptName: '',
@@ -1572,6 +1606,19 @@ export default {
         async runCategorization() {
             this.isCategorizing = true;
             try {
+                // Get the current selected prompt name
+                let selectedPromptName = "Default";
+                if (this.selectedPrompt) {
+                    const promptObj = this.prompts.find(p => p._id === this.selectedPrompt);
+                    if (promptObj) {
+                        selectedPromptName = promptObj.name;
+                    }
+                }
+
+                // Increment run counter
+                this.categorizationRunCount++;
+                const currentRunNumber = this.categorizationRunCount;
+
                 // API expects objects with 'modelName' property instead of 'name'
                 // Map the provider objects to the format expected by the API
                 const mappedProviders = this.selectedProviderObjects.map(provider => ({
@@ -1596,7 +1643,42 @@ export default {
                     '/simulation/categorization',
                     requestPayload
                 );
-                this.categorizationResult = response.data;
+                
+                // Enhance results with run number and prompt information
+                const enhancedResults = response.data.map(result => {
+                    if (!result.metadata) {
+                        result.metadata = {};
+                    }
+                    // Add promptName to metadata for display in table
+                    result.metadata.promptName = selectedPromptName;
+                    result.metadata.promptId = this.selectedPrompt || null;
+                    // Add run number
+                    result.runNumber = currentRunNumber;
+                    
+                    return result;
+                });
+                
+                // Create a run metadata object
+                const runMetadata = {
+                    timestamp: new Date().toISOString(),
+                    promptName: selectedPromptName,
+                    chainId: this.chainId,
+                    tweetUrl: this.dagText,
+                    runNumber: currentRunNumber
+                };
+                
+                // Create a new run object with deep clone to prevent reference issues
+                const newRun = {
+                    results: JSON.parse(JSON.stringify(enhancedResults)),
+                    metadata: runMetadata
+                };
+                
+                // Add to the beginning of the array (newest first)
+                this.categorizationRuns.unshift(newRun);
+                
+                // For backward compatibility, also update categorizationResult
+                this.categorizationResult = enhancedResults;
+                
                 this.$message.success('Categorization completed');
             } catch (error) {
                 this.$message.error('Failed to run categorization');
@@ -1623,6 +1705,14 @@ export default {
             } catch (error) {
                 this.$message.error('Failed to fetch prompts');
                 console.error('Error fetching prompts:', error);
+            }
+        },
+        clearCategorizationHistory() {
+            if (confirm("Are you sure you want to clear all categorization results?")) {
+                this.categorizationRuns = [];
+                this.categorizationResult = null;
+                this.categorizationRunCount = 0;
+                this.$message.success('Categorization history cleared');
             }
         },
     },
@@ -1964,5 +2054,35 @@ ol.constraints-inner {
 .prompt-actions {
     display: flex;
     gap: 10px;
+}
+
+.categorization-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.categorization-run {
+    margin-bottom: 30px;
+}
+
+.run-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    background-color: #f5f7fa;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.run-header h5 {
+    margin: 0;
+    color: #606266;
+    font-weight: bold;
+}
+
+.clear-history-button {
+    min-width: 120px;
 }
 </style>
