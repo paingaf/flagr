@@ -112,91 +112,6 @@
                     >
                 </el-breadcrumb>
 
-                <!--
-                <div class="header-row">
-                    <div class="header-controls">
-                        <el-autocomplete
-                            v-model="userSearchInput"
-                            :fetch-suggestions="debounceSearchUsers"
-                            placeholder="Search user by username"
-                            :trigger-on-focus="false"
-                            @select="handleUserSelect"
-                            value-key="username"
-                            class="user-select"
-                        >
-                            <template slot-scope="{ item }">
-                                <div class="user-suggestion-item">
-                                    <span>{{ item.username }}</span>
-                                    <span
-                                        style="
-                                            float: right;
-                                            color: #8492a6;
-                                            font-size: 13px;
-                                        "
-                                    >
-                                        {{ item.firstName }}
-                                    </span>
-                                </div>
-                            </template>
-                        </el-autocomplete>
-
-                        <el-input
-                            v-model="chainId"
-                            placeholder="Enter Chain ID"
-                            class="chain-id-input"
-                            @input="handleChainIdChange"
-                        ></el-input>
-
-                        <div class="dag-input-group">
-                            <el-input
-                                v-model="dagText"
-                                placeholder="Enter tweet url"
-                                class="dag-text-input"
-                                @input="handleTweetUrlChange"
-                            ></el-input>
-                        </div>
-
-                        <el-select
-                            v-model="selectedProvider"
-                            placeholder="Select LLM Provider"
-                            class="model-select"
-                            @change="handleProviderChange"
-                        >
-                            <el-option
-                                v-for="item in providers"
-                                :key="item.value"
-                                :label="item.label"
-                                :value="item.value"
-                            ></el-option>
-                        </el-select>
-
-                        <el-button
-                            class="config-button"
-                            @click="openConfig"
-                            type="primary"
-                            plain
-                        >
-                            <i class="el-icon-setting"></i> Weights
-                        </el-button>
-                    </div>
-                </div>
-                -->
-
-                <!--
-                <div class="header-row">
-                    <div class="context-input-group">
-                        <el-input
-                            type="textarea"
-                            v-model="promptText"
-                            placeholder="Enter prompt (optional)"
-                            :rows="10"
-                            class="context-text-input"
-                            @input="handleContextChange"
-                        ></el-input>
-                    </div>
-                </div>
-                -->
-
                 <div v-if="loaded && flag">
                     <el-tabs>
                         <el-tab-pane label="Categorization">
@@ -247,6 +162,96 @@
                                         ></el-option>
                                     </el-select>
                                 </div>
+
+                                <!-- Chain Data Display -->
+                                <el-collapse-transition>
+                                    <div v-if="showChainData && chainData" class="chain-data-container">
+                                        <div class="result-header">
+                                            <h4>Tweet Chain Data: {{ chainId }}</h4>
+                                            <div class="result-actions">
+                                                <el-button 
+                                                    size="small" 
+                                                    @click="showChainData = false" 
+                                                    type="text"
+                                                >
+                                                    Close
+                                                </el-button>
+                                            </div>
+                                        </div>
+                                        
+                                        <el-collapse v-model="expandedChainData">
+                                            <el-collapse-item name="chain-data">
+                                                <template slot="title">
+                                                    <div class="run-header-title">
+                                                        <span>{{ chainData.username }}</span> - {{ new Date(chainData.createdAt).toLocaleString() }} - {{ chainData.chainType }}
+                                                    </div>
+                                                </template>
+                                                
+                                                <el-card v-loading="chainDataLoading" shadow="hover" class="chain-data-card">
+                                                    <div class="chain-data-section">
+                                                        <div class="chain-header-info">
+                                                            <div><strong>Username:</strong> {{ chainData.username }}</div>
+                                                            <div><strong>Created:</strong> {{ new Date(chainData.createdAt).toLocaleString() }}</div>
+                                                            <div><strong>Chain Type:</strong> {{ chainData.chainType }}</div>
+                                                            <div v-if="chainData.isThread"><strong>Is Thread:</strong> Yes</div>
+                                                            <div v-if="chainData.isComplete"><strong>Is Complete:</strong> Yes</div>
+                                                        </div>
+                                                        
+                                                        <div class="chain-content-section">
+                                                            <h5>Content</h5>
+                                                            <div class="chain-content">{{ chainData.content }}</div>
+                                                        </div>
+                                                        
+                                                        <div class="chain-content-section" v-if="chainData.chain && chainData.chain.length">
+                                                            <h5>Chain ({{ chainData.chain.length }} items)</h5>
+                                                            <div class="chain-items">
+                                                                <div v-for="(item, index) in chainData.chain" :key="index" class="chain-item">
+                                                                    {{ item }}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div class="chain-content-section" v-if="chainData.categoryMatches && chainData.categoryMatches.length">
+                                                            <h5>Category Matches</h5>
+                                                            <div v-for="(match, matchIndex) in chainData.categoryMatches" :key="matchIndex">
+                                                                <div v-if="match.categories">
+                                                                    <div v-for="(categories, level) in match.categories" :key="level" class="category-level">
+                                                                        <strong>{{ level }}:</strong>
+                                                                        <div class="category-items">
+                                                                            <el-tag 
+                                                                                v-for="category in categories" 
+                                                                                :key="category.id"
+                                                                                size="small"
+                                                                                type="info"
+                                                                                effect="plain"
+                                                                                class="category-tag"
+                                                                            >
+                                                                                {{ category.name }}
+                                                                            </el-tag>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="category-match-details">
+                                                                    <span><strong>Prompt:</strong> {{ match.promptId || 'default' }}</span>
+                                                                    <span><strong>Analyzed:</strong> {{ new Date(match.analyzedAt).toLocaleString() }}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <!-- Raw JSON Data -->
+                                                        <div class="chain-content-section">
+                                                            <el-collapse>
+                                                                <el-collapse-item title="Raw Chain Data">
+                                                                    <pre class="chain-data-json">{{ JSON.stringify(chainData, null, 2) }}</pre>
+                                                                </el-collapse-item>
+                                                            </el-collapse>
+                                                        </div>
+                                                    </div>
+                                                </el-card>
+                                            </el-collapse-item>
+                                        </el-collapse>
+                                    </div>
+                                </el-collapse-transition>
 
                                 <div class="header-row">
                                     <div class="context-input-group">
@@ -305,7 +310,6 @@
                                         </el-button>
                                     </div>
 
-                                    <!-- Categorization Results -->
                                     <div
                                         v-if="categorizationRuns.length"
                                         class="categorization-result"
@@ -330,7 +334,6 @@
                                             </div>
                                         </div>
                                         
-                                        <!-- Most recent run first -->
                                         <div 
                                             v-for="(run, runIndex) in categorizationRuns" 
                                             :key="runIndex" 
@@ -347,7 +350,6 @@
                                                         </div>
                                                     </template>
                                                     
-                                                    <!-- Table for this run's results -->
                                                     <el-table 
                                                         :data="run.results" 
                                                         style="width: 100%; margin-bottom: 20px;"
@@ -434,7 +436,6 @@
                                                         </el-table-column>
                                                     </el-table>
                                                     
-                                                    <!-- JSON view for this run -->
                                                     <div class="raw-response-section">
                                                         <div class="raw-response-header">
                                                             <h5>Raw Response</h5>
@@ -448,7 +449,6 @@
                                                 </el-collapse-item>
                                             </el-collapse>
                                             
-                                            <!-- Divider between runs -->
                                             <el-divider v-if="runIndex < categorizationRuns.length - 1"></el-divider>
                                         </div>
                                     </div>
@@ -701,7 +701,6 @@
                                             </el-form>
                                         </el-card>
 
-                                        <!-- Add evaluation result section -->
                                         <div
                                             v-if="variant.evaluationResult"
                                             class="evaluation-result"
@@ -719,28 +718,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <!--
-                                <div class="variants-input">
-                                    <div
-                                        class="flex-row equal-width constraints-inputs-container"
-                                    >
-                                        <div>
-                                            <el-input
-                                                placeholder="Variant Key"
-                                                v-model="newVariant.key"
-                                            ></el-input>
-                                        </div>
-                                    </div>
-                                    <el-button
-                                        class="width--full"
-                                        :disabled="!newVariant.key"
-                                        @click.prevent="createVariant"
-                                        >Create Variant</el-button
-                                    >
-                                </div>
-                                -->
 
-                                <!-- Add A/B Test Simulation Button -->
                                 <div
                                     v-if="flag.variants.length >= 2"
                                     class="ab-test-simulation"
@@ -758,7 +736,6 @@
                                         Run A/B Test Simulation
                                     </el-button>
 
-                                    <!-- Add A/B Test Simulation Result -->
                                     <div
                                         v-if="abTestResult"
                                         class="simulation-result"
@@ -927,6 +904,11 @@ export default {
             expandedRuns: [],
             expandedJson: [],
             pendingRuns: [],
+            debouncedFetchChainData: null,
+            chainData: null,
+            chainDataLoading: false,
+            showChainData: false,
+            expandedChainData: ['chain-data'],
         };
     },
     computed: {
@@ -1554,6 +1536,9 @@ export default {
                     CHAIN_ID: value,
                 });
             }
+            
+            // Trigger debounced fetch of chain data
+            this.debouncedFetchChainData();
         },
         async runABTestSimulation() {
             if (this.flag.variants.length < 2) {
@@ -1834,10 +1819,34 @@ export default {
                 this.$message.success(`Successfully synced ${runsToSync.length} pending runs`);
             }
         },
+        async fetchChainData() {
+            if (!this.chainId || this.chainId.trim() === '') {
+                this.chainData = null;
+                this.showChainData = false;
+                return;
+            }
+            
+            this.chainDataLoading = true;
+            try {
+                console.log('Fetching tweet chain data for chain ID:', this.chainId);
+                const response = await tgAxios.get(`/tweet-chain/${this.chainId}`);
+                console.log('Tweet chain response:', response.data);
+                this.chainData = response.data;
+                this.showChainData = true;
+            } catch (error) {
+                console.error('Error fetching tweet chain data:', error);
+                this.$message.error('Failed to fetch tweet chain data');
+                this.chainData = null;
+                this.showChainData = false;
+            } finally {
+                this.chainDataLoading = false;
+            }
+        },
     },
     async created() {
         this.debounceSearchUsers = debounce(this.searchUsers, 300);
         this.debounceSearchAuthors = debounce(this.searchAuthors, 300);
+        this.debouncedFetchChainData = debounce(this.fetchChainData, 500);
     },
     async mounted() {
         this.fetchFlag();
@@ -2283,5 +2292,98 @@ ol.constraints-inner {
     padding: 0 10px;
     font-size: 13px;
     color: #909399;
+}
+
+/* Chain Data Styles */
+.chain-data-container {
+    margin: 15px 0;
+}
+
+.chain-data-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #303133;
+}
+
+.chain-header-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.chain-content-section {
+    margin-bottom: 15px;
+}
+
+.chain-content-section h5 {
+    margin: 10px 0;
+    font-size: 14px;
+    color: #606266;
+}
+
+.chain-content {
+    padding: 10px;
+    background-color: #f5f7fa;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.chain-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.chain-item {
+    padding: 4px 8px;
+    background-color: #f0f2f5;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: monospace;
+}
+
+.category-level {
+    margin-bottom: 8px;
+}
+
+.category-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 4px;
+}
+
+.category-tag {
+    margin-right: 5px;
+}
+
+.category-match-details {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #909399;
+    margin-top: 5px;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px dashed #ebeef5;
+}
+
+.chain-data-card {
+    margin-top: 0;
+    border-top: none;
+}
+
+.chain-data-json {
+    background-color: #f5f7fa;
+    padding: 10px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 300px;
+    overflow-y: auto;
 }
 </style>
