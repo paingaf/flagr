@@ -103,6 +103,26 @@
                     </div>
                 </el-dialog>
 
+                <el-dialog
+                    title="Create new variant"
+                    :visible.sync="dialogNewVariantVisible"
+                >
+                    <div>
+                        <p>
+                            <el-input
+                                placeholder="Variant key"
+                                v-model="newVariant.key"
+                            ></el-input>
+                        </p>
+                        <el-button
+                            class="width--full"
+                            :disabled="!newVariant.key"
+                            @click.prevent="createVariantAndCloseDialog"
+                            >Create Variant</el-button
+                        >
+                    </div>
+                </el-dialog>
+
                 <el-breadcrumb separator="/">
                     <el-breadcrumb-item :to="{ name: 'home' }"
                         >Home page</el-breadcrumb-item
@@ -573,7 +593,17 @@
 
                             <el-card class="variants-container">
                                 <div slot="header" class="clearfix">
-                                    <h2>Variants</h2>
+                                    <div class="variants-header">
+                                        <h2>Variants</h2>
+                                        <el-button 
+                                            type="primary" 
+                                            size="small" 
+                                            icon="el-icon-plus"
+                                            @click="dialogNewVariantVisible = true"
+                                        >
+                                            Add Variant
+                                        </el-button>
+                                    </div>
                                 </div>
                                 <div
                                     class="variants-container-inner"
@@ -846,6 +876,7 @@ export default {
             dialogDeleteFlagVisible: false,
             dialogEditDistributionOpen: false,
             dialogCreateSegmentOpen: false,
+            dialogNewVariantVisible: false,
             entityTypes: [],
             allTags: [],
             allowCreateEntityType: true,
@@ -908,7 +939,7 @@ export default {
             chainData: null,
             chainDataLoading: false,
             showChainData: false,
-            expandedChainData: ['chain-data'],
+            expandedChainData: [],
         };
     },
     computed: {
@@ -1044,7 +1075,9 @@ export default {
                 this.newVariant = clone(DEFAULT_VARIANT);
                 this.flag.variants.push(variant);
                 this.$message.success('new variant created');
-            }, handleErr.bind(this));
+            }, (error) => {
+                handleErr.bind(this)(error);
+            });
         },
         deleteVariant(variant) {
             const isVariantInUse = this.flag.segments.some((segment) =>
@@ -1085,7 +1118,9 @@ export default {
                 variant
             ).then(() => {
                 this.$message.success('variant updated');
-            }, handleErr.bind(this));
+            }, (error) => {
+                handleErr.bind(this)(error);
+            });
         },
         createTag() {
             Axios.post(
@@ -1228,7 +1263,9 @@ export default {
                 flag.variants.forEach((variant) => processVariant(variant));
                 this.flag = flag;
                 this.loaded = true;
-            }, handleErr.bind(this));
+            }, (error) => {
+                handleErr.bind(this)(error);
+            });
             this.fetchEntityTypes();
         },
         fetchEntityTypes() {
@@ -1431,20 +1468,31 @@ export default {
                 // Set loading states
                 this.$set(variant, 'evaluating', true);
                 this.isAnyVariantEvaluating = true;
-
-                const response = await tgAxios.post(
+                
+                console.log('Sending evaluation request for matching scores:', {
+                    url: '/simulation/relevance-score',
+                    payload: variant.attachment
+                });
+                
+                tgAxios.post(
                     '/simulation/relevance-score',
                     variant.attachment
-                );
-
-                this.$set(variant, 'evaluationResult', response.data);
-                this.$message.success(
-                    `Evaluation Score: ${response.data.score}`
-                );
+                ).then((response) => {
+                    console.log('Evaluation response:', response.data);
+                    this.$set(variant, 'evaluationResult', response.data);
+                    this.$message.success(
+                        `Evaluation Score: ${response.data.score}`
+                    );
+                }).catch(() => {
+                    this.$message.error('Failed to evaluate variant');
+                }).finally(() => {
+                    // Clear loading states
+                    this.$set(variant, 'evaluating', false);
+                    this.isAnyVariantEvaluating = false;
+                });
+                
             } catch (error) {
                 this.$message.error('Failed to evaluate variant');
-                console.error('Error evaluating variant:', error);
-            } finally {
                 // Clear loading states
                 this.$set(variant, 'evaluating', false);
                 this.isAnyVariantEvaluating = false;
@@ -1841,6 +1889,10 @@ export default {
             } finally {
                 this.chainDataLoading = false;
             }
+        },
+        createVariantAndCloseDialog() {
+            this.createVariant();
+            this.dialogNewVariantVisible = false;
         },
     },
     async created() {
@@ -2385,5 +2437,11 @@ ol.constraints-inner {
     word-wrap: break-word;
     max-height: 300px;
     overflow-y: auto;
+}
+
+.variants-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 </style>
