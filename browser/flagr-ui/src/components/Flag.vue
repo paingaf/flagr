@@ -557,6 +557,161 @@
                                 </el-button>
                             </div>
 
+                            <!-- User Data Display -->
+                            <el-collapse-transition>
+                                <div v-if="showUserData && selectedUser" class="user-data-container">
+                                    <div class="result-header">
+                                        <h4>User Details: {{ selectedUser.username }}</h4>
+                                        <div class="result-actions">
+                                            <el-button 
+                                                size="small" 
+                                                @click="showUserData = false" 
+                                                type="text"
+                                            >
+                                                Close
+                                            </el-button>
+                                        </div>
+                                    </div>
+                                    
+                                    <el-collapse v-model="expandedUserData">
+                                        <el-collapse-item name="user-data">
+                                            <template slot="title">
+                                                <div class="run-header-title">
+                                                    <span>{{ selectedUser.username }}</span>
+                                                    <span v-if="selectedUser.firstName || selectedUser.lastName">
+                                                        - {{ selectedUser.firstName }} {{ selectedUser.lastName }}
+                                                    </span>
+                                                </div>
+                                            </template>
+                                            
+                                            <el-card shadow="hover" class="user-data-card">
+                                                <div class="user-data-section">
+                                                    <div class="user-header-info">
+                                                        <div v-if="selectedUser.firstName"><strong>First Name:</strong> {{ selectedUser.firstName }}</div>
+                                                        <div v-if="selectedUser.lastName"><strong>Last Name:</strong> {{ selectedUser.lastName }}</div>
+                                                        <div v-if="selectedUser.bio"><strong>Bio:</strong> {{ selectedUser.bio }}</div>
+                                                        <div v-if="selectedUser.email"><strong>Email:</strong> {{ selectedUser.email }}</div>
+                                                        <div v-if="selectedUser.createdAt"><strong>Created:</strong> {{ new Date(selectedUser.createdAt).toLocaleString() }}</div>
+                                                    </div>
+                                                    
+                                                    <!-- Preferences Section -->
+                                                    <div v-if="selectedUser.preferences" class="user-preferences-section">
+                                                        <h5>User Preferences</h5>
+                                                        <div class="user-preferences">
+                                                            <div v-for="(value, key) in selectedUser.preferences" :key="key" class="preference-item">
+                                                                <strong>{{ key }}:</strong> 
+                                                                <span v-if="Array.isArray(value)">{{ value.join(', ') }}</span>
+                                                                <span v-else-if="typeof value === 'object'">{{ JSON.stringify(value) }}</span>
+                                                                <span v-else>{{ value }}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <!-- Raw JSON Data -->
+                                                    <div class="user-content-section">
+                                                        <el-collapse>
+                                                            <el-collapse-item title="Raw User Data">
+                                                                <pre class="user-data-json">{{ JSON.stringify(selectedUser, null, 2) }}</pre>
+                                                            </el-collapse-item>
+                                                        </el-collapse>
+                                                    </div>
+                                                </div>
+                                            </el-card>
+                                        </el-collapse-item>
+                                    </el-collapse>
+                                </div>
+                            </el-collapse-transition>
+
+                            <!-- Chain Data Display -->
+                            <el-collapse-transition>
+                                <div v-if="showChainData && chainData" class="chain-data-container">
+                                    <div class="result-header">
+                                        <h4>Tweet Chain Data: {{ chainId }}</h4>
+                                        <div class="result-actions">
+                                            <el-button 
+                                                size="small" 
+                                                @click="showChainData = false" 
+                                                type="text"
+                                            >
+                                                Close
+                                            </el-button>
+                                        </div>
+                                    </div>
+                                    
+                                    <el-collapse v-model="expandedChainData">
+                                        <el-collapse-item name="chain-data">
+                                            <template slot="title">
+                                                <div class="run-header-title">
+                                                    <span>{{ chainData.username }}</span> - {{ new Date(chainData.createdAt).toLocaleString() }} - {{ chainData.chainType }}
+                                                </div>
+                                            </template>
+                                            
+                                            <el-card v-loading="chainDataLoading" shadow="hover" class="chain-data-card">
+                                                <div class="chain-data-section">
+                                                    <div class="chain-header-info">
+                                                        <div><strong>Username:</strong> {{ chainData.username }}</div>
+                                                        <div><strong>Created:</strong> {{ new Date(chainData.createdAt).toLocaleString() }}</div>
+                                                        <div><strong>Chain Type:</strong> {{ chainData.chainType }}</div>
+                                                        <div v-if="chainData.isThread"><strong>Is Thread:</strong> Yes</div>
+                                                        <div v-if="chainData.isComplete"><strong>Is Complete:</strong> Yes</div>
+                                                    </div>
+                                                    
+                                                    <div class="chain-content-section">
+                                                        <h5>Content</h5>
+                                                        <div class="chain-content">{{ chainData.content }}</div>
+                                                    </div>
+                                                    
+                                                    <div class="chain-content-section" v-if="chainData.chain && chainData.chain.length">
+                                                        <h5>Chain ({{ chainData.chain.length }} items)</h5>
+                                                        <div class="chain-items">
+                                                            <div v-for="(item, index) in chainData.chain" :key="index" class="chain-item">
+                                                                {{ item }}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div class="chain-content-section" v-if="chainData.categoryMatches && chainData.categoryMatches.length">
+                                                        <h5>Category Matches</h5>
+                                                        <div v-for="(match, matchIndex) in chainData.categoryMatches" :key="matchIndex">
+                                                            <div v-if="match.categories">
+                                                                <div v-for="(categories, level) in match.categories" :key="level" class="category-level">
+                                                                    <strong>{{ level }}:</strong>
+                                                                    <div class="category-items">
+                                                                        <el-tag 
+                                                                            v-for="category in categories" 
+                                                                            :key="category.id"
+                                                                            size="small"
+                                                                            type="info"
+                                                                            effect="plain"
+                                                                            class="category-tag"
+                                                                        >
+                                                                            {{ category.name }}
+                                                                        </el-tag>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="category-match-details">
+                                                                <span><strong>Prompt:</strong> {{ match.promptId || 'default' }}</span>
+                                                                <span><strong>Analyzed:</strong> {{ new Date(match.analyzedAt).toLocaleString() }}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <!-- Raw JSON Data -->
+                                                    <div class="chain-content-section">
+                                                        <el-collapse>
+                                                            <el-collapse-item title="Raw Chain Data">
+                                                                <pre class="chain-data-json">{{ JSON.stringify(chainData, null, 2) }}</pre>
+                                                            </el-collapse-item>
+                                                        </el-collapse>
+                                                    </div>
+                                                </div>
+                                            </el-card>
+                                        </el-collapse-item>
+                                    </el-collapse>
+                                </div>
+                            </el-collapse-transition>
+
                             <div class="header-row">
                                 <div class="context-input-group">
                                     <el-input
@@ -940,6 +1095,8 @@ export default {
             chainDataLoading: false,
             showChainData: false,
             expandedChainData: [],
+            showUserData: false,
+            expandedUserData: [],
         };
     },
     computed: {
@@ -1310,8 +1467,11 @@ export default {
             }
         },
         handleUserSelect(user) {
+            console.log('Selected user data:', user);
             this.selectedUser = user;
             this.userSearchInput = user.username;
+            this.showUserData = true;
+            
             if (this.$refs.configDrawer) {
                 const currentConfig = this.$refs.configDrawer.config;
                 this.$refs.configDrawer.updateConfig({
@@ -1500,6 +1660,7 @@ export default {
         },
         async searchUsers(queryString, callback) {
             try {
+                console.log('Searching for users with query:', queryString);
                 const response = await tgAxios.get(
                     '/tg-users/preferences',
                     {
@@ -1512,6 +1673,7 @@ export default {
                         },
                     }
                 );
+                console.log('User search response:', response.data);
                 callback(response.data);
             } catch (error) {
                 this.$message.error('Failed to fetch users');
@@ -2443,5 +2605,64 @@ ol.constraints-inner {
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+.user-data-container {
+    margin: 15px 0;
+}
+
+.user-data-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #303133;
+}
+
+.user-header-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.user-content-section {
+    margin-bottom: 15px;
+}
+
+.user-content-section h5 {
+    margin: 10px 0;
+    font-size: 14px;
+    color: #606266;
+}
+
+.user-preferences-section {
+    margin: 15px 0;
+}
+
+.user-preferences {
+    background-color: #f5f7fa;
+    border-radius: 4px;
+    padding: 10px;
+}
+
+.preference-item {
+    margin-bottom: 5px;
+    word-break: break-word;
+}
+
+.user-data-card {
+    margin-top: 0;
+    border-top: none;
+}
+
+.user-data-json {
+    background-color: #f5f7fa;
+    padding: 10px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 300px;
+    overflow-y: auto;
 }
 </style>
