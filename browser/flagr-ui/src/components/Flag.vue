@@ -381,6 +381,15 @@
                                                         ></el-table-column>
                                                         
                                                         <el-table-column
+                                                            label="Chain ID"
+                                                            width="120"
+                                                        >
+                                                            <template>
+                                                                {{ run.metadata && run.metadata.chainId ? run.metadata.chainId : 'N/A' }}
+                                                            </template>
+                                                        </el-table-column>
+                                                        
+                                                        <el-table-column
                                                             prop="modelName"
                                                             label="Model Name"
                                                             width="150"
