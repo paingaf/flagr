@@ -541,7 +541,6 @@ import constants from '@/constants';
 import helpers from '@/helpers/helpers';
 import Spinner from '@/components/Spinner';
 import FlagHistory from '@/components/FlagHistory';
-import vueJsonEditor from 'vue-json-editor';
 import { operators } from '@/operators.json';
 import ConfigurationDrawer from './ConfigurationDrawer.vue';
 import ChainDataDisplay from './ChainDataDisplay.vue';
@@ -558,7 +557,7 @@ const OPERATOR_VALUE_TO_LABEL_MAP = operators.reduce((acc, el) => {
     return acc;
 }, {});
 
-const { sum, pluck, handleErr } = helpers;
+const { pluck, handleErr } = helpers;
 
 const { API_URL, FLAGR_UI_POSSIBLE_ENTITY_TYPES } = constants;
 
@@ -581,13 +580,6 @@ const DEFAULT_TAG = {
     value: '',
 };
 
-const DEFAULT_DISTRIBUTION = {
-    bitmap: '',
-    variantID: 0,
-    variantKey: '',
-    percent: 0,
-};
-
 function processSegment(segment) {
     segment.newConstraint = clone(DEFAULT_CONSTRAINT);
 }
@@ -603,7 +595,6 @@ export default {
     components: {
         spinner: Spinner,
         flagHistory: FlagHistory,
-        vueJsonEditor,
         ConfigurationDrawer,
         ChainDataDisplay,
         UserDataDisplay,
