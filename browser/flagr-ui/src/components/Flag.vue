@@ -373,14 +373,19 @@
                                                     <el-table 
                                                         :data="run.results" 
                                                         style="width: 100%; margin-bottom: 20px;"
+                                                        border
+                                                        :fit="false"
+                                                        resize-observer
                                                     >
                                                         <el-table-column 
+                                                            resizable
                                                             label="#" 
                                                             width="60"
                                                             prop="runNumber"
                                                         ></el-table-column>
                                                         
                                                         <el-table-column
+                                                            resizable
                                                             label="Chain ID"
                                                             width="120"
                                                         >
@@ -390,12 +395,14 @@
                                                         </el-table-column>
                                                         
                                                         <el-table-column
+                                                            resizable
                                                             prop="modelName"
                                                             label="Model Name"
                                                             width="150"
                                                         ></el-table-column>
                                                         
                                                         <el-table-column
+                                                            resizable
                                                             prop="startedAt"
                                                             label="Started At"
                                                             width="180"
@@ -406,6 +413,7 @@
                                                         </el-table-column>
                                                         
                                                         <el-table-column
+                                                            resizable
                                                             prop="totalCost"
                                                             label="Total Cost"
                                                             width="120"
@@ -416,12 +424,17 @@
                                                         </el-table-column>
                                                         
                                                         <el-table-column
+                                                            resizable
                                                             prop="timeTakenMs"
                                                             label="Time (ms)"
                                                             width="120"
                                                         ></el-table-column>
                                                         
-                                                        <el-table-column label="Categories">
+                                                        <el-table-column 
+                                                            resizable
+                                                            label="Categories"
+                                                            min-width="300"
+                                                        >
                                                             <template slot-scope="scope">
                                                                 <div
                                                                     v-for="(
@@ -443,6 +456,7 @@
                                                         </el-table-column>
                                                         
                                                         <el-table-column
+                                                            resizable
                                                             label="Prompt Name"
                                                             width="150"
                                                         >
@@ -2673,5 +2687,24 @@ ol.constraints-inner {
     word-wrap: break-word;
     max-height: 300px;
     overflow-y: auto;
+}
+
+/* Styles for resizable table columns */
+.el-table__column-resize-proxy {
+    background-color: #409eff;
+    width: 2px;
+}
+
+.el-table th.is-resizing {
+    background-color: #f5f7fa;
+}
+
+.el-table .cell {
+    word-break: break-word;
+}
+
+/* Ensure content in category column is readable */
+.el-table .el-table__row .cell {
+    line-height: 1.5;
 }
 </style>
