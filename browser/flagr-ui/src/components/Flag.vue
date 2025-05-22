@@ -2,106 +2,22 @@
     <el-row>
         <el-col :span="20" :offset="2">
             <div class="container flag-container">
-                <el-dialog
-                    title="Delete feature flag"
+                <delete-flag-dialog
                     :visible.sync="dialogDeleteFlagVisible"
-                >
-                    <span
-                        >Are you sure you want to delete this feature
-                        flag?</span
-                    >
-                    <span slot="footer" class="dialog-footer">
-                        <el-button @click="dialogDeleteFlagVisible = false"
-                            >Cancel</el-button
-                        >
-                        <el-button type="primary" @click.prevent="deleteFlag"
-                            >Confirm</el-button
-                        >
-                    </span>
-                </el-dialog>
+                    @confirm-delete="deleteFlag"
+                ></delete-flag-dialog>
 
-                <el-dialog
-                    title="Edit distribution"
+                <edit-distribution-dialog
                     :visible.sync="dialogEditDistributionOpen"
-                >
-                    <div v-if="loaded && flag">
-                        <div
-                            v-for="variant in flag.variants"
-                            :key="'distribution-variant-' + variant.id"
-                        >
-                            <div>
-                                <el-checkbox
-                                    @change="(e) => selectVariant(e, variant)"
-                                    :checked="!!newDistributions[variant.id]"
-                                ></el-checkbox>
-                                <el-tag
-                                    type="danger"
-                                    :disable-transitions="true"
-                                    >{{ variant.key }}</el-tag
-                                >
-                            </div>
-                            <el-slider
-                                v-if="!newDistributions[variant.id]"
-                                :value="0"
-                                :disabled="true"
-                                show-input
-                            ></el-slider>
-                            <div v-if="!!newDistributions[variant.id]">
-                                <el-slider
-                                    v-model="
-                                        newDistributions[variant.id].percent
-                                    "
-                                    :disabled="false"
-                                    show-input
-                                ></el-slider>
-                            </div>
-                        </div>
-                    </div>
-                    <el-button
-                        class="width--full"
-                        :disabled="!newDistributionIsValid"
-                        @click.prevent="() => saveDistribution(selectedSegment)"
-                        >Save</el-button
-                    >
+                    :segment="selectedSegment"
+                    :variants="flag.variants"
+                    @save-distribution="handleSaveDistributionFromDialog"
+                ></edit-distribution-dialog>
 
-                    <el-alert
-                        class="edit-distribution-alert"
-                        v-if="!newDistributionIsValid"
-                        :title="
-                            'Percentages must add up to 100% (currently at ' +
-                            newDistributionPercentageSum +
-                            '%)'
-                        "
-                        type="error"
-                        show-icon
-                    ></el-alert>
-                </el-dialog>
-
-                <el-dialog
-                    title="Create segment"
+                <create-segment-dialog
                     :visible.sync="dialogCreateSegmentOpen"
-                >
-                    <div>
-                        <p>
-                            <el-input
-                                placeholder="Segment description"
-                                v-model="newSegment.description"
-                            ></el-input>
-                        </p>
-                        <p>
-                            <el-slider
-                                v-model="newSegment.rolloutPercent"
-                                show-input
-                            ></el-slider>
-                        </p>
-                        <el-button
-                            class="width--full"
-                            :disabled="!newSegment.description"
-                            @click.prevent="createSegment"
-                            >Create Segment</el-button
-                        >
-                    </div>
-                </el-dialog>
+                    @create-segment="handleCreateSegmentFromDialog"
+                ></create-segment-dialog>
 
                 <el-dialog
                     title="Create new variant"
@@ -122,6 +38,11 @@
                         >
                     </div>
                 </el-dialog>
+
+                <create-variant-dialog
+                    :visible.sync="dialogNewVariantVisible"
+                    @create-variant="handleCreateVariantFromDialog"
+                ></create-variant-dialog>
 
                 <el-breadcrumb separator="/">
                     <el-breadcrumb-item :to="{ name: 'home' }"
@@ -184,127 +105,26 @@
                                 </div>
 
                                 <!-- Chain Data Display -->
-                                <el-collapse-transition>
-                                    <div v-if="showChainData && chainData" class="chain-data-container">
-                                        <div class="result-header">
-                                            <h4>Tweet Chain Data: {{ chainId }}</h4>
-                                            <div class="result-actions">
-                                                <el-button 
-                                                    size="small" 
-                                                    @click="showChainData = false" 
-                                                    type="text"
-                                                >
-                                                    Close
-                                                </el-button>
-                                            </div>
-                                        </div>
-                                        
-                                        <el-collapse v-model="expandedChainData">
-                                            <el-collapse-item name="chain-data">
-                                                <template slot="title">
-                                                    <div class="run-header-title">
-                                                        <span>{{ chainData.username }}</span> - {{ new Date(chainData.createdAt).toLocaleString() }} - {{ chainData.chainType }}
-                                                    </div>
-                                                </template>
-                                                
-                                                <el-card v-loading="chainDataLoading" shadow="hover" class="chain-data-card">
-                                                    <div class="chain-data-section">
-                                                        <div class="chain-header-info">
-                                                            <div><strong>Username:</strong> {{ chainData.username }}</div>
-                                                            <div><strong>Created:</strong> {{ new Date(chainData.createdAt).toLocaleString() }}</div>
-                                                            <div><strong>Chain Type:</strong> {{ chainData.chainType }}</div>
-                                                            <div v-if="chainData.isThread"><strong>Is Thread:</strong> Yes</div>
-                                                            <div v-if="chainData.isComplete"><strong>Is Complete:</strong> Yes</div>
-                                                        </div>
-                                                        
-                                                        <div class="chain-content-section">
-                                                            <h5>Content</h5>
-                                                            <div class="chain-content">{{ chainData.content }}</div>
-                                                        </div>
-                                                        
-                                                        <div class="chain-content-section" v-if="chainData.chain && chainData.chain.length">
-                                                            <h5>Chain ({{ chainData.chain.length }} items)</h5>
-                                                            <div class="chain-items">
-                                                                <div v-for="(item, index) in chainData.chain" :key="index" class="chain-item">
-                                                                    {{ item }}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        
-                                                        <div class="chain-content-section" v-if="chainData.categoryMatches && chainData.categoryMatches.length">
-                                                            <h5>Category Matches</h5>
-                                                            <div v-for="(match, matchIndex) in chainData.categoryMatches" :key="matchIndex">
-                                                                <div v-if="match.categories">
-                                                                    <div v-for="(categories, level) in match.categories" :key="level" class="category-level">
-                                                                        <strong>{{ level }}:</strong>
-                                                                        <div class="category-items">
-                                                                            <el-tag 
-                                                                                v-for="category in categories" 
-                                                                                :key="category.id"
-                                                                                size="small"
-                                                                                type="info"
-                                                                                effect="plain"
-                                                                                class="category-tag"
-                                                                            >
-                                                                                {{ category.name }}
-                                                                            </el-tag>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                                <div class="category-match-details">
-                                                                    <span><strong>Prompt:</strong> {{ match.promptId || 'default' }}</span>
-                                                                    <span><strong>Analyzed:</strong> {{ new Date(match.analyzedAt).toLocaleString() }}</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        
-                                                        <!-- Raw JSON Data -->
-                                                        <div class="chain-content-section">
-                                                            <el-collapse>
-                                                                <el-collapse-item title="Raw Chain Data">
-                                                                    <pre class="chain-data-json">{{ JSON.stringify(chainData, null, 2) }}</pre>
-                                                                </el-collapse-item>
-                                                            </el-collapse>
-                                                        </div>
-                                                    </div>
-                                                </el-card>
-                                            </el-collapse-item>
-                                        </el-collapse>
-                                    </div>
-                                </el-collapse-transition>
+                                <chain-data-display
+                                    :chain-id="chainId"
+                                    :chain-data="chainData"
+                                    :is-loading="chainDataLoading"
+                                    :show-data="showChainData"
+                                    @close="showChainData = false"
+                                    :initially-expanded="true"
+                                ></chain-data-display>
 
                                 <div class="header-row">
                                     <div class="context-input-group">
-                                        <el-input
-                                            type="textarea"
-                                            v-model="promptText"
-                                            placeholder="Enter category match prompt"
-                                            :rows="10"
-                                            class="context-text-input"
+                                        <prompt-editor
+                                            :prompt-text.sync="promptText"
+                                            :original-prompt-text="originalPromptText"
+                                            :new-prompt-name.sync="newPromptName"
+                                            :is-modified="isPromptModified"
                                             @input="handlePromptInput"
-                                        ></el-input>
-
-                                        <div
-                                            v-if="isPromptModified"
-                                            class="prompt-save-container"
-                                        >
-                                            <el-input
-                                                v-model="newPromptName"
-                                                placeholder="Enter prompt name"
-                                                class="prompt-name-input"
-                                            ></el-input>
-                                            <div class="prompt-actions">
-                                                <el-button
-                                                    type="primary"
-                                                    @click="savePrompt"
-                                                    >Save New Prompt</el-button
-                                                >
-                                                <el-button
-                                                    @click="cancelPromptEdit"
-                                                    >Cancel</el-button
-                                                >
-                                            </div>
-                                        </div>
+                                            @save-prompt="savePrompt"
+                                            @cancel-edit="cancelPromptEdit"
+                                        ></prompt-editor>
                                     </div>
                                 </div>
 
@@ -581,191 +401,34 @@
                             </div>
 
                             <!-- User Data Display -->
-                            <el-collapse-transition>
-                                <div v-if="showUserData && selectedUser" class="user-data-container">
-                                    <div class="result-header">
-                                        <h4>User Details: {{ selectedUser.username }}</h4>
-                                        <div class="result-actions">
-                                            <el-button 
-                                                size="small" 
-                                                @click="showUserData = false" 
-                                                type="text"
-                                            >
-                                                Close
-                                            </el-button>
-                                        </div>
-                                    </div>
-                                    
-                                    <el-collapse v-model="expandedUserData">
-                                        <el-collapse-item name="user-data">
-                                            <template slot="title">
-                                                <div class="run-header-title">
-                                                    <span>{{ selectedUser.username }}</span>
-                                                    <span v-if="selectedUser.firstName || selectedUser.lastName">
-                                                        - {{ selectedUser.firstName }} {{ selectedUser.lastName }}
-                                                    </span>
-                                                </div>
-                                            </template>
-                                            
-                                            <el-card shadow="hover" class="user-data-card">
-                                                <div class="user-data-section">
-                                                    <div class="user-header-info">
-                                                        <div v-if="selectedUser.firstName"><strong>First Name:</strong> {{ selectedUser.firstName }}</div>
-                                                        <div v-if="selectedUser.lastName"><strong>Last Name:</strong> {{ selectedUser.lastName }}</div>
-                                                        <div v-if="selectedUser.bio"><strong>Bio:</strong> {{ selectedUser.bio }}</div>
-                                                        <div v-if="selectedUser.email"><strong>Email:</strong> {{ selectedUser.email }}</div>
-                                                        <div v-if="selectedUser.createdAt"><strong>Created:</strong> {{ new Date(selectedUser.createdAt).toLocaleString() }}</div>
-                                                    </div>
-                                                    
-                                                    <!-- Preferences Section -->
-                                                    <div v-if="selectedUser.preferences" class="user-preferences-section">
-                                                        <h5>User Preferences</h5>
-                                                        <div class="user-preferences">
-                                                            <div v-for="(value, key) in selectedUser.preferences" :key="key" class="preference-item">
-                                                                <strong>{{ key }}:</strong> 
-                                                                <span v-if="Array.isArray(value)">{{ value.join(', ') }}</span>
-                                                                <span v-else-if="typeof value === 'object'">{{ JSON.stringify(value) }}</span>
-                                                                <span v-else>{{ value }}</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <!-- Raw JSON Data -->
-                                                    <div class="user-content-section">
-                                                        <el-collapse>
-                                                            <el-collapse-item title="Raw User Data">
-                                                                <pre class="user-data-json">{{ JSON.stringify(selectedUser, null, 2) }}</pre>
-                                                            </el-collapse-item>
-                                                        </el-collapse>
-                                                    </div>
-                                                </div>
-                                            </el-card>
-                                        </el-collapse-item>
-                                    </el-collapse>
-                                </div>
-                            </el-collapse-transition>
+                            <user-data-display
+                                :user="selectedUser"
+                                :show-data="showUserData"
+                                @close="showUserData = false"
+                                :initially-expanded="true"
+                            ></user-data-display>
 
                             <!-- Chain Data Display -->
-                            <el-collapse-transition>
-                                <div v-if="showChainData && chainData" class="chain-data-container">
-                                    <div class="result-header">
-                                        <h4>Tweet Chain Data: {{ chainId }}</h4>
-                                        <div class="result-actions">
-                                            <el-button 
-                                                size="small" 
-                                                @click="showChainData = false" 
-                                                type="text"
-                                            >
-                                                Close
-                                            </el-button>
-                                        </div>
-                                    </div>
-                                    
-                                    <el-collapse v-model="expandedChainData">
-                                        <el-collapse-item name="chain-data">
-                                            <template slot="title">
-                                                <div class="run-header-title">
-                                                    <span>{{ chainData.username }}</span> - {{ new Date(chainData.createdAt).toLocaleString() }} - {{ chainData.chainType }}
-                                                </div>
-                                            </template>
-                                            
-                                            <el-card v-loading="chainDataLoading" shadow="hover" class="chain-data-card">
-                                                <div class="chain-data-section">
-                                                    <div class="chain-header-info">
-                                                        <div><strong>Username:</strong> {{ chainData.username }}</div>
-                                                        <div><strong>Created:</strong> {{ new Date(chainData.createdAt).toLocaleString() }}</div>
-                                                        <div><strong>Chain Type:</strong> {{ chainData.chainType }}</div>
-                                                        <div v-if="chainData.isThread"><strong>Is Thread:</strong> Yes</div>
-                                                        <div v-if="chainData.isComplete"><strong>Is Complete:</strong> Yes</div>
-                                                    </div>
-                                                    
-                                                    <div class="chain-content-section">
-                                                        <h5>Content</h5>
-                                                        <div class="chain-content">{{ chainData.content }}</div>
-                                                    </div>
-                                                    
-                                                    <div class="chain-content-section" v-if="chainData.chain && chainData.chain.length">
-                                                        <h5>Chain ({{ chainData.chain.length }} items)</h5>
-                                                        <div class="chain-items">
-                                                            <div v-for="(item, index) in chainData.chain" :key="index" class="chain-item">
-                                                                {{ item }}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <div class="chain-content-section" v-if="chainData.categoryMatches && chainData.categoryMatches.length">
-                                                        <h5>Category Matches</h5>
-                                                        <div v-for="(match, matchIndex) in chainData.categoryMatches" :key="matchIndex">
-                                                            <div v-if="match.categories">
-                                                                <div v-for="(categories, level) in match.categories" :key="level" class="category-level">
-                                                                    <strong>{{ level }}:</strong>
-                                                                    <div class="category-items">
-                                                                        <el-tag 
-                                                                            v-for="category in categories" 
-                                                                            :key="category.id"
-                                                                            size="small"
-                                                                            type="info"
-                                                                            effect="plain"
-                                                                            class="category-tag"
-                                                                        >
-                                                                            {{ category.name }}
-                                                                        </el-tag>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <div class="category-match-details">
-                                                                <span><strong>Prompt:</strong> {{ match.promptId || 'default' }}</span>
-                                                                <span><strong>Analyzed:</strong> {{ new Date(match.analyzedAt).toLocaleString() }}</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <!-- Raw JSON Data -->
-                                                    <div class="chain-content-section">
-                                                        <el-collapse>
-                                                            <el-collapse-item title="Raw Chain Data">
-                                                                <pre class="chain-data-json">{{ JSON.stringify(chainData, null, 2) }}</pre>
-                                                            </el-collapse-item>
-                                                        </el-collapse>
-                                                    </div>
-                                                </div>
-                                            </el-card>
-                                        </el-collapse-item>
-                                    </el-collapse>
-                                </div>
-                            </el-collapse-transition>
+                            <chain-data-display
+                                :chain-id="chainId"
+                                :chain-data="chainData"
+                                :is-loading="chainDataLoading"
+                                :show-data="showChainData" 
+                                @close="showChainData = false"
+                                :initially-expanded="true"
+                            ></chain-data-display>
 
                             <div class="header-row">
                                 <div class="context-input-group">
-                                    <el-input
-                                        type="textarea"
-                                        v-model="promptText"
-                                        placeholder="Enter prompt (optional)"
-                                        :rows="10"
-                                        class="context-text-input"
+                                    <prompt-editor
+                                        :prompt-text.sync="promptText"
+                                        :original-prompt-text="originalPromptText"
+                                        :new-prompt-name.sync="newPromptName"
+                                        :is-modified="isPromptModified"
                                         @input="handlePromptInput"
-                                    ></el-input>
-
-                                    <div
-                                        v-if="isPromptModified"
-                                        class="prompt-save-container"
-                                    >
-                                        <el-input
-                                            v-model="newPromptName"
-                                            placeholder="Enter prompt name"
-                                            class="prompt-name-input"
-                                        ></el-input>
-                                        <div class="prompt-actions">
-                                            <el-button
-                                                type="primary"
-                                                @click="savePrompt"
-                                                >Save New Prompt</el-button
-                                            >
-                                            <el-button @click="cancelPromptEdit"
-                                                >Cancel</el-button
-                                            >
-                                        </div>
-                                    </div>
+                                        @save-prompt="savePrompt"
+                                        @cancel-edit="cancelPromptEdit"
+                                    ></prompt-editor>
                                 </div>
                             </div>
 
@@ -787,144 +450,19 @@
                                     class="variants-container-inner"
                                     v-if="flag.variants.length"
                                 >
-                                    <div
-                                        v-for="variant in flag.variants"
+                                    <variant-card
+                                        v-for="(variant, index) in flag.variants" 
                                         :key="variant.id"
-                                    >
-                                        <el-card shadow="hover">
-                                            <el-form
-                                                label-position="left"
-                                                label-width="100px"
-                                            >
-                                                <div class="flex-row id-row">
-                                                    <el-tag
-                                                        type="primary"
-                                                        :disable-transitions="
-                                                            true
-                                                        "
-                                                    >
-                                                        Variant ID:
-                                                        <b>{{ variant.id }}</b>
-                                                    </el-tag>
-                                                    <el-input
-                                                        class="variant-key-input"
-                                                        size="small"
-                                                        placeholder="Key"
-                                                        v-model="variant.key"
-                                                    >
-                                                        <template slot="prepend"
-                                                            >Key</template
-                                                        >
-                                                    </el-input>
-                                                    <div
-                                                        class="flex-row-right save-remove-variant-row"
-                                                    >
-                                                        <el-button
-                                                            slot="append"
-                                                            size="small"
-                                                            @click="
-                                                                putVariant(
-                                                                    variant
-                                                                )
-                                                            "
-                                                            >Save
-                                                            Variant</el-button
-                                                        >
-                                                        <el-button
-                                                            @click="
-                                                                deleteVariant(
-                                                                    variant
-                                                                )
-                                                            "
-                                                            size="small"
-                                                        >
-                                                            <span
-                                                                class="el-icon-delete"
-                                                            />
-                                                        </el-button>
-                                                        <el-button
-                                                            slot="append"
-                                                            size="small"
-                                                            @click="
-                                                                applyConfigToVariant(
-                                                                    variant
-                                                                )
-                                                            "
-                                                            type="primary"
-                                                            plain
-                                                        >
-                                                            Apply Configuration
-                                                        </el-button>
-                                                        <el-button
-                                                            slot="append"
-                                                            size="small"
-                                                            @click="
-                                                                evaluateVariant(
-                                                                    variant
-                                                                )
-                                                            "
-                                                            type="success"
-                                                            plain
-                                                            :loading="
-                                                                variant.evaluating
-                                                            "
-                                                            :disabled="
-                                                                variant.evaluating ||
-                                                                isAnyVariantEvaluating ||
-                                                                isSimulating
-                                                            "
-                                                        >
-                                                            Evaluate
-                                                        </el-button>
-                                                    </div>
-                                                </div>
-                                                <el-collapse class="flex-row">
-                                                    <el-collapse-item
-                                                        title="Variant attachment"
-                                                        class="variant-attachment-collapsable-title"
-                                                    >
-                                                        <p
-                                                            class="variant-attachment-title"
-                                                        >
-                                                            You can add JSON in
-                                                            key/value pairs
-                                                            format.
-                                                        </p>
-                                                        <vue-json-editor
-                                                            v-model="
-                                                                variant.attachment
-                                                            "
-                                                            :showBtns="false"
-                                                            :mode="'code'"
-                                                            v-on:has-error="
-                                                                variant.attachmentValid = false
-                                                            "
-                                                            v-on:input="
-                                                                variant.attachmentValid = true
-                                                            "
-                                                            class="variant-attachment-content"
-                                                        ></vue-json-editor>
-                                                    </el-collapse-item>
-                                                </el-collapse>
-                                            </el-form>
-                                        </el-card>
-
-                                        <div
-                                            v-if="variant.evaluationResult"
-                                            class="evaluation-result"
-                                        >
-                                            <div class="evaluation-header">
-                                                <h4>Evaluation Result</h4>
-                                            </div>
-                                            <pre class="evaluation-json">{{
-                                                JSON.stringify(
-                                                    variant.evaluationResult,
-                                                    null,
-                                                    2
-                                                )
-                                            }}</pre>
-                                        </div>
-                                    </div>
+                                        :variant.sync="flag.variants[index]" 
+                                        :is-evaluating-any-other="isAnyVariantEvaluating && !variant.evaluating"
+                                        :is-simulating="isSimulating"
+                                        @save="putVariant"
+                                        @delete="deleteVariant"
+                                        @apply-config="applyConfigToVariant"
+                                        @evaluate="evaluateVariant"
+                                        @attachment-error="() => $message.error('Variant attachment is not valid')" 
+                                        @show-message="(msg) => $message[msg.type](msg.message)"
+                                    ></variant-card>
                                 </div>
 
                                 <div
@@ -994,6 +532,14 @@ import FlagHistory from '@/components/FlagHistory';
 import vueJsonEditor from 'vue-json-editor';
 import { operators } from '@/operators.json';
 import ConfigurationDrawer from './ConfigurationDrawer.vue';
+import ChainDataDisplay from './ChainDataDisplay.vue';
+import UserDataDisplay from './UserDataDisplay.vue';
+import PromptEditor from './PromptEditor.vue';
+import VariantCard from './VariantCard.vue';
+import CreateVariantDialog from './CreateVariantDialog.vue';
+import DeleteFlagDialog from './DeleteFlagDialog.vue';
+import EditDistributionDialog from './EditDistributionDialog.vue';
+import CreateSegmentDialog from './CreateSegmentDialog.vue';
 
 const OPERATOR_VALUE_TO_LABEL_MAP = operators.reduce((acc, el) => {
     acc[el.value] = el.label;
@@ -1047,6 +593,14 @@ export default {
         flagHistory: FlagHistory,
         vueJsonEditor,
         ConfigurationDrawer,
+        ChainDataDisplay,
+        UserDataDisplay,
+        PromptEditor,
+        VariantCard,
+        CreateVariantDialog,
+        DeleteFlagDialog,
+        EditDistributionDialog,
+        CreateSegmentDialog,
     },
     data() {
         return {
@@ -1077,7 +631,6 @@ export default {
             newVariant: clone(DEFAULT_VARIANT),
             newTag: clone(DEFAULT_TAG),
             selectedSegment: null,
-            newDistributions: {},
             operatorOptions: operators,
             operatorValueToLabelMap: OPERATOR_VALUE_TO_LABEL_MAP,
             showMdEditor: false,
@@ -1123,15 +676,6 @@ export default {
         };
     },
     computed: {
-        newDistributionPercentageSum() {
-            return sum(pluck(Object.values(this.newDistributions), 'percent'));
-        },
-        newDistributionIsValid() {
-            const percentageSum = sum(
-                pluck(Object.values(this.newDistributions), 'percent')
-            );
-            return percentageSum === 100;
-        },
         flagId() {
             return this.$route.params.flagId;
         },
@@ -1174,7 +718,11 @@ export default {
             Axios.delete(`${API_URL}/flags/${this.flagId}`).then(() => {
                 this.$router.replace({ name: 'home' });
                 this.$message.success(`You deleted flag ${flagId}`);
-            }, handleErr.bind(this));
+                this.dialogDeleteFlagVisible = false;
+            }, (err) => {
+                handleErr.bind(this)(err); 
+                this.dialogDeleteFlagVisible = false;
+            });
         },
         putFlag(flag) {
             Axios.put(`${API_URL}/flags/${this.flagId}`, {
@@ -1186,31 +734,6 @@ export default {
             }).then(() => {
                 this.$message.success(`Flag updated`);
             }, handleErr.bind(this));
-        },
-        setFlagEnabled(checked) {
-            Axios.put(`${API_URL}/flags/${this.flagId}/enabled`, {
-                enabled: checked,
-            }).then(() => {
-                const checkedStr = checked ? 'on' : 'off';
-                this.$message.success(
-                    `You turned ${checkedStr} this feature flag`
-                );
-            }, handleErr.bind(this));
-        },
-        selectVariant($event, variant) {
-            const checked = $event;
-            if (checked) {
-                const distribution = Object.assign(
-                    clone(DEFAULT_DISTRIBUTION),
-                    {
-                        variantKey: variant.key,
-                        variantID: variant.id,
-                    }
-                );
-                this.$set(this.newDistributions, variant.id, distribution);
-            } else {
-                this.$delete(this.newDistributions, variant.id);
-            }
         },
         editDistribution(segment) {
             this.selectedSegment = segment;
@@ -1227,23 +750,22 @@ export default {
 
             this.dialogEditDistributionOpen = true;
         },
-        saveDistribution(segment) {
-            const distributions = Object.values(this.newDistributions)
-                .filter((distribution) => distribution.percent !== 0)
-                .map((distribution) => {
-                    let dist = clone(distribution);
-                    delete dist.id;
-                    return dist;
-                });
-
+        handleSaveDistributionFromDialog(payload) {
+            const { segmentId, distributions } = payload;
+            // The actual API call
             Axios.put(
-                `${API_URL}/flags/${this.flagId}/segments/${segment.id}/distributions`,
-                { distributions }
+                `${API_URL}/flags/${this.flagId}/segments/${segmentId}/distributions`,
+                { distributions } // Payload from dialog is already formatted
             ).then((response) => {
-                let distributions = response.data;
-                this.selectedSegment.distributions = distributions;
+                let updatedDistributions = response.data;
+                // Update the original segment in the flag object
+                const segmentInFlag = this.flag.segments.find(s => s.id === segmentId);
+                if (segmentInFlag) {
+                    segmentInFlag.distributions = updatedDistributions;
+                }
+                this.selectedSegment.distributions = updatedDistributions; // Also update selectedSegment if still used directly
                 this.dialogEditDistributionOpen = false;
-                this.$message.success('distributions updated');
+                this.$message.success('Distributions updated');
             }, handleErr.bind(this));
         },
         createVariant() {
@@ -1255,6 +777,7 @@ export default {
                 this.newVariant = clone(DEFAULT_VARIANT);
                 this.flag.variants.push(variant);
                 this.$message.success('new variant created');
+                this.dialogNewVariantVisible = false;
             }, (error) => {
                 handleErr.bind(this)(error);
             });
@@ -1621,7 +1144,15 @@ export default {
             this.promptText = this.originalPromptText;
             this.isPromptModified = false;
             this.newPromptName = '';
-            this.handleContextChange(this.originalPromptText);
+            // Ensure config drawer is also updated with the original/cancelled text
+            if (this.$refs.configDrawer) {
+                const currentConfig = this.$refs.configDrawer.config;
+                this.$refs.configDrawer.updateConfig({
+                    ...currentConfig,
+                    categoryMatchPrompt: this.originalPromptText,
+                    promptId: this.prompts.find(p => p.content === this.originalPromptText)?._id || currentConfig.promptId
+                });
+            }
         },
         handlePromptChange(value) {
             const selectedPrompt = this.prompts.find((p) => p._id === value);
@@ -1666,19 +1197,18 @@ export default {
                     this.$message.success(
                         `Evaluation Score: ${response.data.score}`
                     );
-                }).catch(() => {
+                }).catch((err) => {
+                    console.error('Error evaluating variant:', err);
                     this.$message.error('Failed to evaluate variant');
                 }).finally(() => {
-                    // Clear loading states
                     this.$set(variant, 'evaluating', false);
-                    this.isAnyVariantEvaluating = false;
+                    this.isAnyVariantEvaluating = this.flag.variants.some(v => v.evaluating);
                 });
                 
             } catch (error) {
                 this.$message.error('Failed to evaluate variant');
-                // Clear loading states
                 this.$set(variant, 'evaluating', false);
-                this.isAnyVariantEvaluating = false;
+                this.isAnyVariantEvaluating = this.flag.variants.some(v => v.evaluating);
             }
         },
         async searchUsers(queryString, callback) {
@@ -2055,7 +1585,7 @@ export default {
         async fetchChainData() {
             if (!this.chainId || this.chainId.trim() === '') {
                 this.chainData = null;
-                this.showChainData = false;
+                this.showChainData = false; // Ensure this is set
                 return;
             }
             
@@ -2065,12 +1595,12 @@ export default {
                 const response = await tgAxios.get(`/tweet-chain/${this.chainId}`);
                 console.log('Tweet chain response:', response.data);
                 this.chainData = response.data;
-                this.showChainData = true;
+                this.showChainData = true; // Show when data is fetched
             } catch (error) {
                 console.error('Error fetching tweet chain data:', error);
                 this.$message.error('Failed to fetch tweet chain data');
                 this.chainData = null;
-                this.showChainData = false;
+                this.showChainData = false; // Hide on error
             } finally {
                 this.chainDataLoading = false;
             }
@@ -2078,6 +1608,11 @@ export default {
         createVariantAndCloseDialog() {
             this.createVariant();
             this.dialogNewVariantVisible = false;
+        },
+        handleCreateSegmentFromDialog(segmentData) {
+            this.newSegment.description = segmentData.description;
+            this.newSegment.rolloutPercent = segmentData.rolloutPercent;
+            this.createSegment();
         },
     },
     async created() {
