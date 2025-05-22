@@ -220,20 +220,6 @@
                                                             label="Model Name"
                                                             width="150"
                                                         ></el-table-column>
-
-                                                        <el-table-column
-                                                            resizable
-                                                            label="DB Save"
-                                                            width="100"
-                                                            align="center"
-                                                        >
-                                                            <template slot-scope="scope">
-                                                                <span v-if="scope.row.dbSaveStatus === 'saved'" title="Saved to DB">✅</span>
-                                                                <span v-else-if="scope.row.dbSaveStatus === 'failed'" title="Failed to save to DB">❌</span>
-                                                                <span v-else-if="scope.row.dbSaveStatus === 'pending'" title="Save pending or in progress">⏳</span>
-                                                                <span v-else title="Unknown save status">❓</span>
-                                                            </template>
-                                                        </el-table-column>
                                                         
                                                         <el-table-column
                                                             resizable
@@ -263,6 +249,18 @@
                                                             label="Time (ms)"
                                                             width="120"
                                                         ></el-table-column>
+                                                        
+                                                        <el-table-column
+                                                            resizable
+                                                            label="DB Save"
+                                                            width="80"
+                                                            align="center"
+                                                        >
+                                                            <template slot-scope="scope">
+                                                                <i v-if="scope.row.saveStatus" class="el-icon-check save-status-icon success"></i>
+                                                                <i v-else class="el-icon-close save-status-icon failed"></i>
+                                                            </template>
+                                                        </el-table-column>
                                                         
                                                         <el-table-column 
                                                             resizable
@@ -543,6 +541,7 @@ import constants from '@/constants';
 import helpers from '@/helpers/helpers';
 import Spinner from '@/components/Spinner';
 import FlagHistory from '@/components/FlagHistory';
+import vueJsonEditor from 'vue-json-editor';
 import { operators } from '@/operators.json';
 import ConfigurationDrawer from './ConfigurationDrawer.vue';
 import ChainDataDisplay from './ChainDataDisplay.vue';
@@ -559,7 +558,7 @@ const OPERATOR_VALUE_TO_LABEL_MAP = operators.reduce((acc, el) => {
     return acc;
 }, {});
 
-const { pluck, handleErr } = helpers;
+const { sum, pluck, handleErr } = helpers;
 
 const { API_URL, FLAGR_UI_POSSIBLE_ENTITY_TYPES } = constants;
 
@@ -582,6 +581,13 @@ const DEFAULT_TAG = {
     value: '',
 };
 
+const DEFAULT_DISTRIBUTION = {
+    bitmap: '',
+    variantID: 0,
+    variantKey: '',
+    percent: 0,
+};
+
 function processSegment(segment) {
     segment.newConstraint = clone(DEFAULT_CONSTRAINT);
 }
@@ -597,6 +603,7 @@ export default {
     components: {
         spinner: Spinner,
         flagHistory: FlagHistory,
+        vueJsonEditor,
         ConfigurationDrawer,
         ChainDataDisplay,
         UserDataDisplay,
@@ -1439,6 +1446,8 @@ export default {
                     if (!result.metadata) {
                         result.metadata = {};
                     }
+                    // Add save status field (default to false/pending)
+                    result.saveStatus = false;
                     // Add promptName to metadata for display in table
                     result.metadata.promptName = selectedPromptName;
                     result.metadata.promptId = this.selectedPrompt || null;
@@ -1486,8 +1495,18 @@ export default {
                         flagId: this.flagId,
                         run: newRun
                     });
+                    
+                    // Update save status for all results in this run
+                    newRun.results.forEach(result => {
+                        result.saveStatus = true;
+                    });
+                    
+                    this.$message.success('Categorization saved to database');
                 } catch (error) {
                     console.error('Failed to save categorization run to database:', error);
+                    // Keep the default false status for saveStatus
+                    this.$message.warning('Failed to save categorization to database');
+                    
                     // If we have pendingRuns in data, add this run to it
                     if (this.pendingRuns) {
                         this.pendingRuns.push(newRun);
@@ -1650,7 +1669,19 @@ export default {
             
             if (response.data && Array.isArray(response.data)) {
                 // Extract the run objects from the nested structure
-                this.categorizationRuns = response.data.map(item => item.run || item);
+                this.categorizationRuns = response.data.map(item => {
+                    const run = item.run || item;
+                    
+                    // Set saveStatus to true for all results in loaded runs
+                    // (if it's in the database, it was saved successfully)
+                    if (run.results && Array.isArray(run.results)) {
+                        run.results.forEach(result => {
+                            result.saveStatus = true;
+                        });
+                    }
+                    
+                    return run;
+                });
                 
                 if (this.categorizationRuns.length > 0) {
                     // Get the highest run number to continue counting from there
@@ -2246,5 +2277,17 @@ ol.constraints-inner {
 /* Ensure content in category column is readable */
 .el-table .el-table__row .cell {
     line-height: 1.5;
+}
+
+.save-status-icon {
+    font-size: 16px;
+}
+
+.save-status-icon.success {
+    color: #67C23A;
+}
+
+.save-status-icon.failed {
+    color: #F56C6C;
 }
 </style>
