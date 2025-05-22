@@ -607,7 +607,7 @@ function sanitizeForBackend(data, uiOnlyProps = ['saveStatus']) {
         
         // Remove UI-only properties
         uiOnlyProps.forEach(prop => {
-            if (obj.hasOwnProperty(prop)) {
+            if (Object.prototype.hasOwnProperty.call(obj, prop)) {
                 delete obj[prop];
             }
         });
@@ -727,6 +727,47 @@ export default {
         },
     },
     methods: {
+        displayErrorNotification(baseMessage, error) {
+            let detailSource = '';
+            let specificDetail = '';
+
+            if (error && error.response && error.response.data) {
+                console.log('Backend error data:', error.response.data); 
+                const errorData = error.response.data;
+
+                if (errorData.message) {
+                    specificDetail = errorData.message;
+                    detailSource = 'Message';
+                } else if (errorData.errorCode) {
+                    specificDetail = errorData.errorCode;
+                    detailSource = 'Error Code';
+                } else if (errorData.details) {
+                    specificDetail = errorData.details;
+                    detailSource = 'Details';
+                }
+            } else if (error && error.message) {
+                specificDetail = error.message;
+                detailSource = 'Error';
+            }
+
+            let finalMessage = `${baseMessage}.`;
+            if (specificDetail) {
+                finalMessage += `\n${detailSource}: ${specificDetail}.`;
+            } else {
+                finalMessage += `\nAn unexpected error occurred.`;
+            }
+            finalMessage += '\nPlease check the browser console logs for more technical information.';
+
+            this.$message.error({
+                message: finalMessage,
+                duration: 7000, 
+                showClose: true,
+            });
+
+            if (!(error && error.response && error.response.data)) {
+                console.error(`Full error details for "${baseMessage}":`, error);
+            }
+        },
         applyConfigToVariant(variant) {
             const currentConfig = this.$refs.configDrawer.config;
 
@@ -1232,14 +1273,14 @@ export default {
                     );
                 }).catch((err) => {
                     console.error('Error evaluating variant:', err);
-                    this.$message.error('Failed to evaluate variant');
+                    this.displayErrorNotification('Failed to evaluate variant', err);
                 }).finally(() => {
                     this.$set(variant, 'evaluating', false);
                     this.isAnyVariantEvaluating = this.flag.variants.some(v => v.evaluating);
                 });
                 
             } catch (error) {
-                this.$message.error('Failed to evaluate variant');
+                this.displayErrorNotification('Failed to evaluate variant', error);
                 this.$set(variant, 'evaluating', false);
                 this.isAnyVariantEvaluating = this.flag.variants.some(v => v.evaluating);
             }
@@ -1539,8 +1580,9 @@ export default {
                 
                 this.$message.success('Categorization completed');
             } catch (error) {
-                this.$message.error('Failed to run categorization');
+                this.$message.error(`Failed to run categorization: \n ${error.response?.data?.errorCode || 'Unknown error'}`);
                 console.error('Error running categorization:', error);
+                console.error(error.response?.data);
             } finally {
                 this.isCategorizing = false;
             }
