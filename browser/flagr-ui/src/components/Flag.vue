@@ -590,6 +590,36 @@ function processVariant(variant) {
     }
 }
 
+// Helper function to remove UI-only properties before sending to backend
+function sanitizeForBackend(data, uiOnlyProps = ['saveStatus']) {
+    // Create a deep copy
+    const sanitized = JSON.parse(JSON.stringify(data));
+    
+    // Process objects recursively
+    const removeUIProps = (obj) => {
+        if (!obj || typeof obj !== 'object') return;
+        
+        // Handle arrays
+        if (Array.isArray(obj)) {
+            obj.forEach(item => removeUIProps(item));
+            return;
+        }
+        
+        // Remove UI-only properties
+        uiOnlyProps.forEach(prop => {
+            if (obj.hasOwnProperty(prop)) {
+                delete obj[prop];
+            }
+        });
+        
+        // Process nested objects
+        Object.values(obj).forEach(val => removeUIProps(val));
+    };
+    
+    removeUIProps(sanitized);
+    return sanitized;
+}
+
 export default {
     name: 'flag',
     components: {
@@ -1482,9 +1512,12 @@ export default {
                 
                 // Save to MongoDB via TG API
                 try {
+                    // Remove UI-only properties before sending to backend
+                    const sanitizedRun = sanitizeForBackend(newRun);
+                    
                     await tgAxios.post('/simulation/flagr/categorization-runs', {
                         flagId: this.flagId,
-                        run: newRun
+                        run: sanitizedRun
                     });
                     
                     // Update save status for all results in this run
