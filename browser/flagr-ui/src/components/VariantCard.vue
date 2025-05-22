@@ -151,11 +151,7 @@ export default {
             this.isEvaluatingThisVariant = true;
             try {
                 // Parent will handle the actual API call
-                await this.$emit('evaluate', this.variant, (success) => {
-                    // Optional: callback to reset loading state based on parent's success/failure
-                    // this.isEvaluatingThisVariant = false; 
-                    // Parent should set variant.evaluating which this component can watch or receive as prop
-                });
+                await this.$emit('evaluate', this.variant);
             } catch(e) {
                  // Parent will show error, this is just to ensure loading state is reset
             } finally {

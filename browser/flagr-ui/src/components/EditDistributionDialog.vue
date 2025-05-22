@@ -69,7 +69,7 @@
 
 <script>
 import clone from 'lodash.clone'; // Ensure lodash.clone is available or use structuredClone
-import { sum, pluck } from '@/helpers/helpers'; // Assuming helpers are accessible
+import { sum, pluck } from '@/helpers/helpers'; // Import the sum and pluck functions
 
 const DEFAULT_DISTRIBUTION = {
     bitmap: '', // You may need to adjust this default or ensure it's handled
@@ -182,20 +182,6 @@ export default {
         save() {
             if (!this.newDistributionIsValid) return;
 
-            const distributionsToSave = Object.values(this.localDistributions)
-                .filter((distribution) => distribution.percent !== 0 || 
-                    // Also consider variants that were part of original distributions but now set to 0
-                    (this.currentSegment.distributions.some(d => d.variantID === distribution.variantID))
-                )
-                .map((distribution) => {
-                    let dist = clone(distribution);
-                    delete dist.id; // Remove existing distribution ID for PUT request format
-                    return dist;
-                });
-            
-            // If a variant was selected (in localDistributions) but its percent is 0, 
-            // and it was NOT in the original segment distributions, it shouldn't be saved.
-            // The filter above might be too broad. Let's refine.
             const finalDistributions = Object.values(this.localDistributions)
                 .map(dist => {
                     let d = clone(dist);
