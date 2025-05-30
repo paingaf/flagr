@@ -1,91 +1,81 @@
 <template>
-    <el-collapse-transition>
-        <div v-if="showData && chainData" class="chain-data-container">
-            <div class="result-header">
-                <h4>Tweet Chain Data: {{ chainId }}</h4>
-                <div class="result-actions">
-                    <el-button 
-                        size="small" 
-                        @click="handleClose" 
-                        type="text"
-                    >
-                        Close
-                    </el-button>
-                </div>
+    <div v-if="showData && chainData" class="chain-data-container">
+        <div class="result-header clickable-header" @click="toggleExpanded">
+            <h4>Tweet Chain Data: {{ chainId }}</h4>
+            <div class="result-actions">
+                <i :class="expandedIcon" class="expand-icon"></i>
             </div>
-            
-            <el-collapse v-model="internalExpandedChainData">
-                <el-collapse-item name="chain-data">
-                    <template slot="title">
-                        <div class="run-header-title">
+        </div>
+        
+        <el-collapse-transition>
+            <div v-show="isExpanded">
+                <el-card v-loading="isLoading" shadow="hover" class="chain-data-card">
+                    <div class="chain-data-section">
+                        <div class="chain-summary-info">
                             <span>{{ chainData.username }}</span> - {{ formatDate(chainData.createdAt) }} - {{ chainData.chainType }}
                         </div>
-                    </template>
-                    
-                    <el-card v-loading="isLoading" shadow="hover" class="chain-data-card">
-                        <div class="chain-data-section">
-                            <div class="chain-header-info">
-                                <div><strong>Username:</strong> {{ chainData.username }}</div>
-                                <div><strong>Created:</strong> {{ formatDate(chainData.createdAt) }}</div>
-                                <div><strong>Chain Type:</strong> {{ chainData.chainType }}</div>
-                                <div v-if="chainData.isThread"><strong>Is Thread:</strong> Yes</div>
-                                <div v-if="chainData.isComplete"><strong>Is Complete:</strong> Yes</div>
-                            </div>
-                            
-                            <div class="chain-content-section">
-                                <h5>Content</h5>
-                                <div class="chain-content">{{ chainData.content }}</div>
-                            </div>
-                            
-                            <div class="chain-content-section" v-if="chainData.chain && chainData.chain.length">
-                                <h5>Chain ({{ chainData.chain.length }} items)</h5>
-                                <div class="chain-items">
-                                    <div v-for="(item, index) in chainData.chain" :key="index" class="chain-item">
-                                        {{ item }}
-                                    </div>
+                        
+                        <div class="chain-header-info">
+                            <div><strong>Username:</strong> {{ chainData.username }}</div>
+                            <div><strong>Created:</strong> {{ formatDate(chainData.createdAt) }}</div>
+                            <div><strong>Chain Type:</strong> {{ chainData.chainType }}</div>
+                            <div v-if="chainData.isThread"><strong>Is Thread:</strong> Yes</div>
+                            <div v-if="chainData.isComplete"><strong>Is Complete:</strong> Yes</div>
+                        </div>
+                        
+                        <div class="chain-content-section">
+                            <h5>Content</h5>
+                            <div class="chain-content">{{ chainData.content }}</div>
+                        </div>
+                        
+                        <div class="chain-content-section" v-if="chainData.chain && chainData.chain.length">
+                            <h5>Chain ({{ chainData.chain.length }} items)</h5>
+                            <div class="chain-items">
+                                <div v-for="(item, index) in chainData.chain" :key="index" class="chain-item">
+                                    {{ item }}
                                 </div>
-                            </div>
-                            
-                            <div class="chain-content-section" v-if="chainData.categoryMatches && chainData.categoryMatches.length">
-                                <h5>Category Matches</h5>
-                                <div v-for="(match, matchIndex) in chainData.categoryMatches" :key="matchIndex">
-                                    <div v-if="match.categories">
-                                        <div v-for="(categories, level) in match.categories" :key="level" class="category-level">
-                                            <strong>{{ level }}:</strong>
-                                            <div class="category-items">
-                                                <el-tag 
-                                                    v-for="category in categories" 
-                                                    :key="category.id"
-                                                    size="small"
-                                                    type="info"
-                                                    effect="plain"
-                                                    class="category-tag"
-                                                >
-                                                    {{ category.name }}
-                                                </el-tag>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="category-match-details">
-                                        <span><strong>Prompt:</strong> {{ match.promptId || 'default' }}</span>
-                                        <span><strong>Analyzed:</strong> {{ formatDate(match.analyzedAt) }}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="chain-content-section">
-                                <el-collapse>
-                                    <el-collapse-item title="Raw Chain Data">
-                                        <pre class="chain-data-json">{{ JSON.stringify(chainData, null, 2) }}</pre>
-                                    </el-collapse-item>
-                                </el-collapse>
                             </div>
                         </div>
-                    </el-card>
-                </el-collapse-item>
-            </el-collapse>
-        </div>
-    </el-collapse-transition>
+                        
+                        <div class="chain-content-section" v-if="chainData.categoryMatches && chainData.categoryMatches.length">
+                            <h5>Category Matches</h5>
+                            <div v-for="(match, matchIndex) in chainData.categoryMatches" :key="matchIndex">
+                                <div v-if="match.categories">
+                                    <div v-for="(categories, level) in match.categories" :key="level" class="category-level">
+                                        <strong>{{ level }}:</strong>
+                                        <div class="category-items">
+                                            <el-tag 
+                                                v-for="category in categories" 
+                                                :key="category.id"
+                                                size="small"
+                                                type="info"
+                                                effect="plain"
+                                                class="category-tag"
+                                            >
+                                                {{ category.name }}
+                                            </el-tag>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="category-match-details">
+                                    <span><strong>Prompt:</strong> {{ match.promptId || 'default' }}</span>
+                                    <span><strong>Analyzed:</strong> {{ formatDate(match.analyzedAt) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="chain-content-section">
+                            <el-collapse>
+                                <el-collapse-item title="Raw Chain Data">
+                                    <pre class="chain-data-json">{{ JSON.stringify(chainData, null, 2) }}</pre>
+                                </el-collapse-item>
+                            </el-collapse>
+                        </div>
+                    </div>
+                </el-card>
+            </div>
+        </el-collapse-transition>
+    </div>
 </template>
 
 <script>
@@ -115,20 +105,25 @@ export default {
     },
     data() {
         return {
-            internalExpandedChainData: [],
+            isExpanded: false,
         };
+    },
+    computed: {
+        expandedIcon() {
+            return this.isExpanded ? 'el-icon-arrow-down' : 'el-icon-arrow-right';
+        },
     },
     watch: {
         showData(newVal) {
             if (newVal && this.initiallyExpanded && this.chainData) {
-                this.internalExpandedChainData = ['chain-data'];
+                this.isExpanded = true;
             } else if (!newVal) {
-                this.internalExpandedChainData = [];
+                this.isExpanded = false;
             }
         },
         chainData(newVal) {
              if (newVal && this.showData && this.initiallyExpanded) {
-                this.internalExpandedChainData = ['chain-data'];
+                this.isExpanded = true;
             }
         }
     },
@@ -137,13 +132,13 @@ export default {
             if (!dateString) return 'N/A';
             return new Date(dateString).toLocaleString();
         },
-        handleClose() {
-            this.$emit('close');
+        toggleExpanded() {
+            this.isExpanded = !this.isExpanded;
         }
     },
     created() {
         if (this.showData && this.initiallyExpanded && this.chainData) {
-            this.internalExpandedChainData = ['chain-data'];
+            this.isExpanded = true;
         }
     }
 };
@@ -165,6 +160,15 @@ export default {
     border-radius: 4px;
 }
 
+.clickable-header {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.clickable-header:hover {
+    background-color: #e9ecef;
+}
+
 .result-header h4 {
     margin: 0;
     font-size: 16px;
@@ -176,10 +180,19 @@ export default {
     gap: 10px;
 }
 
-.run-header-title { /* Re-used class name, ensure it's styled appropriately or rename */
+.expand-icon {
+    font-size: 16px;
+    color: #606266;
+    transition: transform 0.2s;
+}
+
+.chain-summary-info {
     color: #606266;
     font-weight: bold;
     font-size: 14px;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #ebeef5;
 }
 
 .chain-data-card {
