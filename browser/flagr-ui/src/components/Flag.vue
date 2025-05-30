@@ -56,522 +56,77 @@
                 <div v-if="loaded && flag">
                     <el-tabs>
                         <el-tab-pane label="Categorization">
-                            <div class="categorization-container">
-                                <div class="header-controls">
-                                    <el-input
-                                        v-model="chainId"
-                                        placeholder="Enter Chain ID"
-                                        class="chain-id-input"
-                                        @input="handleChainIdChange"
-                                    ></el-input>
-
-                                    <div class="dag-input-group">
-                                        <el-input
-                                            v-model="dagText"
-                                            placeholder="Enter tweet url"
-                                            class="dag-text-input"
-                                            @input="handleTweetUrlChange"
-                                        ></el-input>
-                                    </div>
-
-                                    <el-select
-                                        v-model="selectedProviders"
-                                        placeholder="Select LLM Providers"
-                                        class="model-select"
-                                        multiple
-                                        @change="handleProviderChange"
-                                    >
-                                        <el-option
-                                            v-for="item in providers"
-                                            :key="item.value"
-                                            :label="item.label"
-                                            :value="item.value"
-                                        ></el-option>
-                                    </el-select>
-
-                                    <el-select
-                                        v-model="selectedPrompt"
-                                        placeholder="Select Prompt"
-                                        class="prompt-select"
-                                        @change="handlePromptChange"
-                                    >
-                                        <el-option
-                                            v-for="item in prompts"
-                                            :key="item._id"
-                                            :label="item.name"
-                                            :value="item._id"
-                                        ></el-option>
-                                    </el-select>
-                                </div>
-
-                                <!-- Chain Data Display -->
-                                <chain-data-display
-                                    :chain-id="chainId"
-                                    :chain-data="chainData"
-                                    :is-loading="chainDataLoading"
-                                    :show-data="showChainData"
-                                    @close="showChainData = false"
-                                    :initially-expanded="true"
-                                ></chain-data-display>
-
-                                <div class="header-row">
-                                    <div class="context-input-group">
-                                        <prompt-editor
-                                            :prompt-text.sync="promptText"
-                                            :original-prompt-text="originalPromptText"
-                                            :new-prompt-name.sync="newPromptName"
-                                            :is-modified="isPromptModified"
-                                            @input="handlePromptInput"
-                                            @save-prompt="savePrompt"
-                                            @cancel-edit="cancelPromptEdit"
-                                        ></prompt-editor>
-                                    </div>
-                                </div>
-
-                                <div class="submit-container">
-                                    <div class="categorization-controls">
-                                        <el-button
-                                            type="primary"
-                                            @click="runCategorization"
-                                            :loading="isCategorizing"
-                                            class="width--full"
-                                        >
-                                            Run Categorization
-                                        </el-button>
-                                        
-                                        <el-button
-                                            v-if="categorizationRuns.length > 0"
-                                            type="danger"
-                                            plain
-                                            @click="clearCategorizationHistory"
-                                            class="clear-history-button"
-                                        >
-                                            Clear History
-                                        </el-button>
-                                    </div>
-
-                                    <div
-                                        v-if="categorizationRuns.length"
-                                        class="categorization-result"
-                                    >
-                                        <div class="result-header">
-                                            <h4>Categorization Results</h4>
-                                            <div class="result-actions">
-                                                <el-button 
-                                                    size="small" 
-                                                    @click="expandAllRuns" 
-                                                    type="text"
-                                                >
-                                                    Expand All
-                                                </el-button>
-                                                <el-button 
-                                                    size="small" 
-                                                    @click="collapseAllRuns" 
-                                                    type="text"
-                                                >
-                                                    Collapse All
-                                                </el-button>
-                                            </div>
-                                        </div>
-                                        
-                                        <div 
-                                            v-for="(run, runIndex) in categorizationRuns" 
-                                            :key="runIndex" 
-                                            class="categorization-run"
-                                        >
-                                            <el-collapse 
-                                                v-model="expandedRuns" 
-                                                @change="handleRunExpand"
-                                            >
-                                                <el-collapse-item :name="'run-' + (run.metadata && run.metadata.runNumber ? run.metadata.runNumber : 0)">
-                                                    <template slot="title">
-                                                        <div class="run-header-title">
-                                                            Run #{{ run.metadata && run.metadata.runNumber ? run.metadata.runNumber : 0 }} - {{ run.metadata && run.metadata.timestamp ? new Date(run.metadata.timestamp).toLocaleString() : 'Unknown date' }}
-                                                        </div>
-                                                    </template>
-                                                    
-                                                    <el-table 
-                                                        :data="run.results" 
-                                                        style="width: 100%; margin-bottom: 20px;"
-                                                        border
-                                                        :fit="false"
-                                                        resize-observer
-                                                    >
-                                                        <el-table-column 
-                                                            resizable
-                                                            label="#" 
-                                                            width="60"
-                                                            prop="runNumber"
-                                                        ></el-table-column>
-                                                        
-                                                        <el-table-column
-                                                            resizable
-                                                            label="Chain ID"
-                                                            width="120"
-                                                        >
-                                                            <template>
-                                                                {{ run.metadata && run.metadata.chainId ? run.metadata.chainId : 'N/A' }}
-                                                            </template>
-                                                        </el-table-column>
-                                                        
-                                                        <el-table-column
-                                                            resizable
-                                                            prop="modelName"
-                                                            label="Model Name"
-                                                            width="150"
-                                                        ></el-table-column>
-                                                        
-                                                        <el-table-column
-                                                            resizable
-                                                            prop="startedAt"
-                                                            label="Started At"
-                                                            width="180"
-                                                        >
-                                                            <template slot-scope="scope">
-                                                                {{ scope.row.startedAt ? new Date(scope.row.startedAt).toLocaleString() : 'N/A' }}
-                                                            </template>
-                                                        </el-table-column>
-                                                        
-                                                        <el-table-column
-                                                            resizable
-                                                            prop="totalCost"
-                                                            label="Total Cost (Estimated)"
-                                                            width="120"
-                                                        >
-                                                            <template slot-scope="scope">
-                                                                {{ scope.row.totalCost ? scope.row.totalCost.toFixed(6) : '0' }}
-                                                            </template>
-                                                        </el-table-column>
-
-                                                        <el-table-column
-                                                            resizable
-                                                            label="Input Tokens"
-                                                            width="120"
-                                                            align="center"
-                                                        >
-                                                            <template slot-scope="scope">
-                                                                {{ scope.row.metadata?.inputTokens ?? 'N/A' }}
-                                                            </template>
-                                                        </el-table-column>
-
-                                                        <el-table-column
-                                                            resizable
-                                                            label="Output Tokens"
-                                                            width="130"
-                                                            align="center"
-                                                        >
-                                                            <template slot-scope="scope">
-                                                                {{ scope.row.metadata?.outputTokens ?? 'N/A' }}
-                                                            </template>
-                                                        </el-table-column>
-
-                                                        <el-table-column
-                                                            resizable
-                                                            label="Total Tokens"
-                                                            width="120"
-                                                            align="center"
-                                                        >
-                                                            <template slot-scope="scope">
-                                                                {{ scope.row.metadata?.totalTokens ?? 'N/A' }}
-                                                            </template>
-                                                        </el-table-column>
-
-                                                        <el-table-column
-                                                            resizable
-                                                            label="Input Cost"
-                                                            width="120"
-                                                            align="center"
-                                                        >
-                                                            <template slot-scope="scope">
-                                                                {{ typeof scope.row.metadata?.inputCost === 'number' ? scope.row.metadata.inputCost.toFixed(6) : 'N/A' }}
-                                                            </template>
-                                                        </el-table-column>
-
-                                                        <el-table-column
-                                                            resizable
-                                                            label="Output Cost"
-                                                            width="120"
-                                                            align="center"
-                                                        >
-                                                            <template slot-scope="scope">
-                                                                {{ typeof scope.row.metadata?.outputCost === 'number' ? scope.row.metadata.outputCost.toFixed(6) : 'N/A' }}
-                                                            </template>
-                                                        </el-table-column>
-
-                                                        <el-table-column
-                                                            resizable
-                                                            prop="timeTakenMs"
-                                                            label="Time (ms)"
-                                                            width="120"
-                                                        ></el-table-column>
-                                                        
-                                                        <el-table-column
-                                                            resizable
-                                                            label="DB Save"
-                                                            width="80"
-                                                            align="center"
-                                                        >
-                                                            <template slot-scope="scope">
-                                                                <i v-if="scope.row.saveStatus" class="el-icon-check save-status-icon success"></i>
-                                                                <i v-else class="el-icon-close save-status-icon failed"></i>
-                                                            </template>
-                                                        </el-table-column>
-                                                        
-                                                        <el-table-column 
-                                                            resizable
-                                                            label="Categories"
-                                                            min-width="300"
-                                                        >
-                                                            <template slot-scope="scope">
-                                                                <div
-                                                                    v-for="(
-                                                                        categories, level
-                                                                    ) in scope.row.categoryResponse || {}"
-                                                                    :key="level"
-                                                                >
-                                                                    <strong
-                                                                        >{{
-                                                                            level
-                                                                        }}:</strong
-                                                                    >
-                                                                    {{
-                                                                        Array.isArray(categories) ? categories.join(', ') : categories
-                                                                    }}
-                                                                </div>
-                                                                <div v-if="!scope.row.categoryResponse">No categories available</div>
-                                                            </template>
-                                                        </el-table-column>
-                                                        
-                                                        <el-table-column
-                                                            resizable
-                                                            label="Prompt Name"
-                                                            width="150"
-                                                        >
-                                                            <template slot-scope="scope">
-                                                                <div
-                                                                    style="
-                                                                        white-space: pre-wrap;
-                                                                        word-break: break-word;
-                                                                    "
-                                                                >
-                                                                    {{
-                                                                        scope.row.metadata && scope.row.metadata.promptName 
-                                                                            ? (scope.row.metadata.promptName.length > 50
-                                                                                ? scope.row.metadata.promptName.substring(0, 50) + '...'
-                                                                                : scope.row.metadata.promptName)
-                                                                            : 'No prompt name available'
-                                                                    }}
-                                                                </div>
-                                                            </template>
-                                                        </el-table-column>
-                                                    </el-table>
-                                                    
-                                                    <div class="raw-response-section">
-                                                        <div class="raw-response-header">
-                                                            <h5>Raw Response</h5>
-                                                        </div>
-                                                        <el-collapse v-model="expandedJson">
-                                                            <el-collapse-item :name="'json-' + (run.metadata && run.metadata.runNumber ? run.metadata.runNumber : 0)">
-                                                                <pre class="result-json">{{ JSON.stringify(run.results, null, 2) }}</pre>
-                                                            </el-collapse-item>
-                                                        </el-collapse>
-                                                    </div>
-                                                </el-collapse-item>
-                                            </el-collapse>
-                                            
-                                            <el-divider v-if="runIndex < categorizationRuns.length - 1"></el-divider>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <categorization-tab
+                                :chain-id.sync="chainId"
+                                :dag-text.sync="dagText"
+                                :selected-providers.sync="selectedProviders"
+                                :selected-prompt.sync="selectedPrompt"
+                                :providers="providers"
+                                :prompts="prompts"
+                                :chain-data="chainData"
+                                :chain-data-loading="chainDataLoading"
+                                :show-chain-data.sync="showChainData"
+                                :prompt-text.sync="promptText"
+                                :original-prompt-text="originalPromptText"
+                                :new-prompt-name.sync="newPromptName"
+                                :is-prompt-modified="isPromptModified"
+                                :is-categorizing="isCategorizing"
+                                :categorization-runs="categorizationRuns"
+                                :expanded-runs.sync="expandedRuns"
+                                :expanded-json.sync="expandedJson"
+                                @provider-change="handleProviderChange"
+                                @prompt-change="handlePromptChange"
+                                @prompt-input="handlePromptInput"
+                                @save-prompt="savePrompt"
+                                @cancel-prompt-edit="cancelPromptEdit"
+                                @run-categorization="runCategorization"
+                                @clear-categorization-history="clearCategorizationHistory"
+                                @expand-all-runs="expandAllRuns"
+                                @collapse-all-runs="collapseAllRuns"
+                                @run-expand="handleRunExpand"
+                            ></categorization-tab>
                         </el-tab-pane>
 
                         <el-tab-pane label="Matching Scores">
-                            <div class="matching-scores-explanation">
-                                <p><strong><em>This tool compares your subscribed user categories with AI-generated categories from your selected LLM model. Note: Using different LLM models for categorization may cause mismatches between existing and new categories.</em></strong></p>
-                            </div>
-
-                            <div class="header-controls">
-                                <el-autocomplete
-                                    v-model="userSearchInput"
-                                    :fetch-suggestions="debounceSearchUsers"
-                                    placeholder="Search user by username"
-                                    :trigger-on-focus="false"
-                                    @select="handleUserSelect"
-                                    value-key="username"
-                                    class="user-select"
-                                >
-                                    <template slot-scope="{ item }">
-                                        <div class="user-suggestion-item">
-                                            <span>{{ item.username }}</span>
-                                            <span
-                                                style="
-                                                    float: right;
-                                                    color: #8492a6;
-                                                    font-size: 13px;
-                                                "
-                                            >
-                                                {{ item.firstName }}
-                                            </span>
-                                        </div>
-                                    </template>
-                                </el-autocomplete>
-
-                                <el-input
-                                    v-model="chainId"
-                                    placeholder="Enter Chain ID"
-                                    class="chain-id-input"
-                                    @input="handleChainIdChange"
-                                ></el-input>
-
-                                <div class="dag-input-group">
-                                    <el-input
-                                        v-model="dagText"
-                                        placeholder="Enter tweet url"
-                                        class="dag-text-input"
-                                        @input="handleTweetUrlChange"
-                                    ></el-input>
-                                </div>
-
-                                <el-select
-                                    v-model="selectedProvider"
-                                    placeholder="Select LLM Provider"
-                                    class="model-select"
-                                    @change="handleProviderChange"
-                                >
-                                    <el-option
-                                        v-for="item in providers"
-                                        :key="item.value"
-                                        :label="item.label"
-                                        :value="item.value"
-                                    ></el-option>
-                                </el-select>
-
-                                <el-select
-                                    v-model="selectedPrompt"
-                                    placeholder="Select Prompt"
-                                    class="prompt-select"
-                                    @change="handlePromptChange"
-                                >
-                                    <el-option
-                                        v-for="item in prompts"
-                                        :key="item._id"
-                                        :label="item.name"
-                                        :value="item._id"
-                                    ></el-option>
-                                </el-select>
-
-                                <el-button
-                                    class="config-button"
-                                    @click="openConfig"
-                                    type="primary"
-                                    plain
-                                >
-                                    <i class="el-icon-setting"></i> Weights
-                                </el-button>
-                            </div>
-
-                            <!-- User Data Display -->
-                            <user-data-display
-                                :user="selectedUser"
-                                :show-data="showUserData"
-                                @close="showUserData = false"
-                                :initially-expanded="true"
-                            ></user-data-display>
-
-                            <!-- Chain Data Display -->
-                            <chain-data-display
-                                :chain-id="chainId"
+                            <matching-scores-tab
+                                :user-search-input.sync="userSearchInput"
+                                :debounce-search-users="debounceSearchUsers"
+                                :selected-user="selectedUser"
+                                :show-user-data.sync="showUserData"
+                                :chain-id.sync="chainId"
                                 :chain-data="chainData"
-                                :is-loading="chainDataLoading"
-                                :show-data="showChainData" 
-                                @close="showChainData = false"
-                                :initially-expanded="true"
-                            ></chain-data-display>
-
-                            <div class="header-row">
-                                <div class="context-input-group">
-                                    <prompt-editor
-                                        :prompt-text.sync="promptText"
-                                        :original-prompt-text="originalPromptText"
-                                        :new-prompt-name.sync="newPromptName"
-                                        :is-modified="isPromptModified"
-                                        @input="handlePromptInput"
-                                        @save-prompt="savePrompt"
-                                        @cancel-edit="cancelPromptEdit"
-                                    ></prompt-editor>
-                                </div>
-                            </div>
-
-                            <el-card class="variants-container">
-                                <div slot="header" class="clearfix">
-                                    <div class="variants-header">
-                                        <h2>Variants</h2>
-                                        <el-button 
-                                            type="primary" 
-                                            size="small" 
-                                            icon="el-icon-plus"
-                                            @click="dialogNewVariantVisible = true"
-                                        >
-                                            Add Variant
-                                        </el-button>
-                                    </div>
-                                </div>
-                                <div
-                                    class="variants-container-inner"
-                                    v-if="flag.variants.length"
-                                >
-                                    <variant-card
-                                        v-for="(variant, index) in flag.variants" 
-                                        :key="variant.id"
-                                        :variant.sync="flag.variants[index]" 
-                                        :is-evaluating-any-other="isAnyVariantEvaluating && !variant.evaluating"
-                                        :is-simulating="isSimulating"
-                                        @save="putVariant"
-                                        @delete="deleteVariant"
-                                        @apply-config="applyConfigToVariant"
-                                        @evaluate="evaluateVariant"
-                                        @attachment-error="() => $message.error('Variant attachment is not valid')" 
-                                        @show-message="(msg) => $message[msg.type](msg.message)"
-                                    ></variant-card>
-                                </div>
-
-                                <div
-                                    v-if="flag.variants.length >= 2"
-                                    class="ab-test-simulation"
-                                >
-                                    <el-button
-                                        type="primary"
-                                        @click="runABTestSimulation"
-                                        :loading="isSimulating"
-                                        :disabled="
-                                            isSimulating ||
-                                            isAnyVariantEvaluating
-                                        "
-                                        class="width--full"
-                                    >
-                                        Run A/B Test Simulation
-                                    </el-button>
-
-                                    <div
-                                        v-if="abTestResult"
-                                        class="simulation-result"
-                                    >
-                                        <div class="simulation-header">
-                                            <h4>A/B Test Simulation Result</h4>
-                                        </div>
-                                        <pre class="simulation-json">{{
-                                            JSON.stringify(
-                                                abTestResult,
-                                                null,
-                                                2
-                                            )
-                                        }}</pre>
-                                    </div>
-                                </div>
-                            </el-card>
-
-                            <spinner v-if="!loaded"></spinner>
+                                :chain-data-loading="chainDataLoading"
+                                :show-chain-data.sync="showChainData"
+                                :dag-text.sync="dagText"
+                                :selected-provider.sync="selectedProvider"
+                                :providers="providers"
+                                :selected-prompt.sync="selectedPrompt"
+                                :prompts="prompts"
+                                :prompt-text.sync="promptText"
+                                :original-prompt-text="originalPromptText"
+                                :new-prompt-name.sync="newPromptName"
+                                :is-prompt-modified="isPromptModified"
+                                :variants="flag.variants"
+                                :is-any-variant-evaluating="isAnyVariantEvaluating"
+                                :is-simulating="isSimulating"
+                                :ab-test-result="abTestResult"
+                                :loaded="loaded"
+                                @user-select="handleUserSelect"
+                                @provider-change="handleProviderChange"
+                                @prompt-change="handlePromptChange"
+                                @open-config="openConfig"
+                                @prompt-input="handlePromptInput"
+                                @save-prompt="savePrompt"
+                                @cancel-prompt-edit="cancelPromptEdit"
+                                @add-variant="dialogNewVariantVisible = true"
+                                @save-variant="putVariant"
+                                @delete-variant="deleteVariant"
+                                @apply-config-to-variant="applyConfigToVariant"
+                                @evaluate-variant="evaluateVariant"
+                                @attachment-error="() => $message.error('Variant attachment is not valid')"
+                                @show-message="(msg) => $message[msg.type](msg.message)"
+                                @run-ab-test="runABTestSimulation"
+                            ></matching-scores-tab>
                         </el-tab-pane>
 
                         <el-tab-pane label="History">
@@ -598,18 +153,15 @@ import { tgAxios } from '@/services/api';
 
 import constants from '@/constants';
 import helpers from '@/helpers/helpers';
-import Spinner from '@/components/Spinner';
 import FlagHistory from '@/components/FlagHistory';
 import { operators } from '@/operators.json';
 import ConfigurationDrawer from './ConfigurationDrawer.vue';
-import ChainDataDisplay from './ChainDataDisplay.vue';
-import UserDataDisplay from './UserDataDisplay.vue';
-import PromptEditor from './PromptEditor.vue';
-import VariantCard from './VariantCard.vue';
 import CreateVariantDialog from './CreateVariantDialog.vue';
 import DeleteFlagDialog from './DeleteFlagDialog.vue';
 import EditDistributionDialog from './EditDistributionDialog.vue';
 import CreateSegmentDialog from './CreateSegmentDialog.vue';
+import CategorizationTab from './CategorizationTab.vue';
+import MatchingScoresTab from './MatchingScoresTab.vue';
 
 const OPERATOR_VALUE_TO_LABEL_MAP = operators.reduce((acc, el) => {
     acc[el.value] = el.label;
@@ -683,17 +235,14 @@ function sanitizeForBackend(data, uiOnlyProps = ['saveStatus']) {
 export default {
     name: 'flag',
     components: {
-        spinner: Spinner,
         flagHistory: FlagHistory,
         ConfigurationDrawer,
-        ChainDataDisplay,
-        UserDataDisplay,
-        PromptEditor,
-        VariantCard,
         CreateVariantDialog,
         DeleteFlagDialog,
         EditDistributionDialog,
         CreateSegmentDialog,
+        CategorizationTab,
+        MatchingScoresTab,
     },
     data() {
         return {
@@ -1798,6 +1347,11 @@ export default {
     watch: {
         chainId(newValue, oldValue) {
             console.log(`chainId changed:\n            Old value: ${oldValue}\n            New value: ${newValue}`);
+            this.handleChainIdChange(newValue);
+        },
+        dagText(newValue, oldValue) {
+            console.log(`dagText changed:\n            Old value: ${oldValue}\n            New value: ${newValue}`);
+            this.handleTweetUrlChange(newValue);
         }
     },
     async mounted() {
@@ -2150,203 +1704,8 @@ ol.constraints-inner {
     border-radius: 4px;
 }
 
-.categorization-container {
-    padding: 20px;
-}
-
-.result-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    padding: 10px;
-    background-color: #f8f9fa;
-    border-radius: 4px;
-}
-
-.result-header h4 {
-    margin: 0;
-    font-size: 16px;
-    color: #303133;
-}
-
-.result-actions {
-    display: flex;
-    gap: 10px;
-}
-
-.run-header-title {
-    color: #606266;
-    font-weight: bold;
-    font-size: 14px;
-}
-
-.raw-response-section {
-    margin-top: 15px;
-    border-top: 1px dashed #ebeef5;
-    padding-top: 15px;
-}
-
-.raw-response-header {
-    margin-bottom: 10px;
-}
-
-.raw-response-header h5 {
-    margin: 0;
-    font-size: 14px;
-    color: #606266;
-}
-
-.clear-history-button {
-    min-width: 120px;
-}
-
-/* Custom styling for the collapse elements */
-.categorization-run .el-collapse-item__header {
-    background-color: #f5f7fa;
-    border-radius: 4px;
-    padding: 0 10px;
-    font-weight: normal;
-}
-
-.categorization-run .el-collapse-item__wrap {
-    background-color: #ffffff;
-    border-radius: 0 0 4px 4px;
-}
-
-.result-json {
-    margin: 0;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-}
-
-.submit-container {
-    margin-top: 10px;
-}
-
-.prompt-save-container {
-    margin-top: 20px;
-    display: flex;
-    gap: 10px;
-}
-
-.prompt-name-input {
-    width: 200px;
-}
-
-.prompt-actions {
-    display: flex;
-    gap: 10px;
-}
-
-.categorization-controls {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-}
-
-.categorization-run {
-    margin-bottom: 15px;
-}
-
-.raw-response-section .el-collapse-item__header {
-    background-color: #f9f9f9;
-    padding: 0 10px;
-    font-size: 13px;
-    color: #909399;
-}
-
-/* Chain Data Styles */
-.chain-data-container {
-    margin: 15px 0;
-}
-
-.chain-data-title {
-    font-size: 16px;
-    font-weight: bold;
-    color: #303133;
-}
-
-.chain-header-info {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    margin-bottom: 15px;
-}
-
-.chain-content-section {
-    margin-bottom: 15px;
-}
-
-.chain-content-section h5 {
-    margin: 10px 0;
-    font-size: 14px;
-    color: #606266;
-}
-
-.chain-content {
-    padding: 10px;
-    background-color: #f5f7fa;
-    border-radius: 4px;
-    white-space: pre-wrap;
-    word-break: break-word;
-}
-
-.chain-items {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-}
-
-.chain-item {
-    padding: 4px 8px;
-    background-color: #f0f2f5;
-    border-radius: 4px;
-    font-size: 12px;
-    font-family: monospace;
-}
-
-.category-level {
-    margin-bottom: 8px;
-}
-
-.category-items {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    margin-top: 4px;
-}
-
-.category-tag {
-    margin-right: 5px;
-}
-
-.category-match-details {
-    display: flex;
-    justify-content: space-between;
-    font-size: 12px;
-    color: #909399;
-    margin-top: 5px;
-    margin-bottom: 15px;
-    padding-bottom: 15px;
-    border-bottom: 1px dashed #ebeef5;
-}
-
-.chain-data-card {
-    margin-top: 0;
-    border-top: none;
-}
-
-.chain-data-json {
-    background-color: #f5f7fa;
-    padding: 10px;
-    border-radius: 4px;
-    font-family: monospace;
-    font-size: 12px;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    max-height: 300px;
-    overflow-y: auto;
+.width--full {
+    width: 100%;
 }
 
 .variants-header {
@@ -2355,108 +1714,12 @@ ol.constraints-inner {
     align-items: center;
 }
 
-.user-data-container {
-    margin: 15px 0;
-}
+/* Styles moved to extracted components:
+   - Categorization styles -> CategorizationTab, CategorizationResultsTable, CategorizationRunCollapse
+   - Chain Data Styles -> ChainDataDisplay
+   - User Data Styles -> UserDataDisplay  
+   - Matching scores styles -> MatchingScoresTab
+   - Table styles -> CategorizationRunCollapse
+*/
 
-.user-data-title {
-    font-size: 16px;
-    font-weight: bold;
-    color: #303133;
-}
-
-.user-header-info {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    margin-bottom: 15px;
-}
-
-.user-content-section {
-    margin-bottom: 15px;
-}
-
-.user-content-section h5 {
-    margin: 10px 0;
-    font-size: 14px;
-    color: #606266;
-}
-
-.user-preferences-section {
-    margin: 15px 0;
-}
-
-.user-preferences {
-    background-color: #f5f7fa;
-    border-radius: 4px;
-    padding: 10px;
-}
-
-.preference-item {
-    margin-bottom: 5px;
-    word-break: break-word;
-}
-
-.user-data-card {
-    margin-top: 0;
-    border-top: none;
-}
-
-.user-data-json {
-    background-color: #f5f7fa;
-    padding: 10px;
-    border-radius: 4px;
-    font-family: monospace;
-    font-size: 12px;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    max-height: 300px;
-    overflow-y: auto;
-}
-
-/* Styles for resizable table columns */
-.el-table__column-resize-proxy {
-    background-color: #409eff;
-    width: 2px;
-}
-
-.el-table th.is-resizing {
-    background-color: #f5f7fa;
-}
-
-.el-table .cell {
-    word-break: break-word;
-}
-
-/* Ensure content in category column is readable */
-.el-table .el-table__row .cell {
-    line-height: 1.5;
-}
-
-.save-status-icon {
-    font-size: 16px;
-}
-
-.save-status-icon.success {
-    color: #67C23A;
-}
-
-.save-status-icon.failed {
-    color: #F56C6C;
-}
-
-.matching-scores-explanation {
-    text-align: center;
-    margin: 20px 0;
-    padding: 15px;
-    background-color: #f8f9fa;
-    border-radius: 4px;
-    border-left: 4px solid #409eff;
-}
-
-.matching-scores-explanation p {
-    margin: 0;
-    color: #606266;
-    font-size: 14px;
-}
 </style>
