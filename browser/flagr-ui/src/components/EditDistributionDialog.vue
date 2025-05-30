@@ -69,7 +69,9 @@
 
 <script>
 import clone from 'lodash.clone'; // Ensure lodash.clone is available or use structuredClone
-import { sum, pluck } from '@/helpers/helpers'; // Import the sum and pluck functions
+import helpers from '@/helpers/helpers'; // Import the helpers object
+
+const { sum, pluck } = helpers; // Destructure the functions from the helpers object
 
 const DEFAULT_DISTRIBUTION = {
     bitmap: '', // You may need to adjust this default or ensure it's handled

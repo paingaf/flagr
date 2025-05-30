@@ -25,7 +25,7 @@
                         slot="append"
                         size="small"
                         @click="applyConfig"
-                        type="primary"
+                        :type="variant.configStale ? 'warning' : 'primary'" 
                         plain
                     >
                         Apply Configuration
@@ -37,7 +37,7 @@
                         type="success"
                         plain
                         :loading="isEvaluatingThisVariant" 
-                        :disabled="isEvaluatingThisVariant || isEvaluatingAnyOther || isSimulating"
+                        :disabled="variant.configStale || isEvaluatingThisVariant || isEvaluatingAnyOther || isSimulating"
                     >
                         Evaluate
                     </el-button>
@@ -63,6 +63,10 @@
                 </el-collapse-item>
             </el-collapse>
         </el-form>
+
+        <div v-if="variant.configStale" class="stale-config-warning">
+            <i class="el-icon-warning"></i> Configuration has changed. Apply the latest to this variant before evaluating.
+        </div>
 
         <div v-if="variant.evaluationResult" class="evaluation-result">
             <div class="evaluation-header">
@@ -249,5 +253,19 @@ export default {
     word-wrap: break-word;
     max-height: 200px;
     overflow-y: auto;
+}
+
+.stale-config-warning {
+    color: #E6A23C; /* Element UI warning color */
+    margin-top: 10px;
+    margin-bottom: 5px;
+    font-size: 0.9em;
+    display: flex;
+    align-items: center;
+}
+
+.stale-config-warning i {
+    margin-right: 5px;
+    font-size: 1.1em;
 }
 </style> 

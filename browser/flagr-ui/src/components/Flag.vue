@@ -332,6 +332,10 @@
                         </el-tab-pane>
 
                         <el-tab-pane label="Matching Scores">
+                            <div class="matching-scores-explanation">
+                                <p><strong><em>This tool compares your subscribed user categories with AI-generated categories from your selected LLM model. Note: Using different LLM models for categorization may cause mismatches between existing and new categories.</em></strong></p>
+                            </div>
+
                             <div class="header-controls">
                                 <el-autocomplete
                                     v-model="userSearchInput"
@@ -588,6 +592,7 @@ function processVariant(variant) {
     if (typeof variant.attachment === 'string') {
         variant.attachment = JSON.parse(variant.attachment);
     }
+    variant.configStale = true;
 }
 
 // Helper function to remove UI-only properties before sending to backend
@@ -770,6 +775,7 @@ export default {
         },
         applyConfigToVariant(variant) {
             const currentConfig = this.$refs.configDrawer.config;
+            console.log('>>> Flag.vue applyConfigToVariant: currentConfig from drawer:', JSON.parse(JSON.stringify(currentConfig)));
 
             if (!variant.attachment) {
                 variant.attachment = {};
@@ -781,6 +787,8 @@ export default {
                 ...variant.attachment,
                 ...configToApply,
             };
+            
+            this.$set(variant, 'configStale', false);
 
             this.putVariant(variant);
         },
@@ -848,6 +856,7 @@ export default {
                 this.newVariant
             ).then((response) => {
                 let variant = response.data;
+                processVariant(variant);
                 this.newVariant = clone(DEFAULT_VARIANT);
                 this.flag.variants.push(variant);
                 this.$message.success('new variant created');
@@ -1091,6 +1100,7 @@ export default {
             this.selectedUser = user;
             this.userSearchInput = user.username;
             this.showUserData = true;
+            this.markAllVariantsStale();
             
             if (this.$refs.configDrawer) {
                 const currentConfig = this.$refs.configDrawer.config;
@@ -1143,6 +1153,7 @@ export default {
                 });
             }
             this.authorSearchInput = author.value;
+            this.markAllVariantsStale();
         },
         handleTweetUrlChange(value) {
             if (this.$refs.configDrawer) {
@@ -1152,6 +1163,7 @@ export default {
                     TWEET_URL: value,
                 });
             }
+            this.markAllVariantsStale();
         },
         handleContextChange(value) {
             if (this.$refs.configDrawer) {
@@ -1165,6 +1177,7 @@ export default {
         handlePromptInput(value) {
             // Always check if the prompt has been modified, even if no prompt is selected
             this.isPromptModified = value !== this.originalPromptText;
+            this.markAllVariantsStale();
 
             if (this.$refs.configDrawer) {
                 const currentConfig = this.$refs.configDrawer.config;
@@ -1234,6 +1247,7 @@ export default {
                 this.promptText = selectedPrompt.content;
                 this.originalPromptText = selectedPrompt.content;
                 this.isPromptModified = false;
+                this.markAllVariantsStale();
 
                 // Update both prompt text and promptId in config
                 if (this.$refs.configDrawer) {
@@ -1363,18 +1377,25 @@ export default {
                         llmProvider: values,
                     });
                 }
+                this.markAllVariantsStale();
             }
         },
         handleChainIdChange(value) {
+            console.log(`>>> Flag.vue handleChainIdChange: Received value: "${value}". Current this.chainId (due to v-model): "${this.chainId}". Timestamp: ${new Date().toISOString()}`);
+            if (this.flag && this.flag.key) {
+                this.markAllVariantsStale();
+            }
+
             if (this.$refs.configDrawer) {
                 const currentConfig = this.$refs.configDrawer.config;
                 this.$refs.configDrawer.updateConfig({
                     ...currentConfig,
                     CHAIN_ID: value,
                 });
+                console.log(`>>> Flag.vue handleChainIdChange: Updated configDrawer.config.CHAIN_ID to: "${value}"`);
             }
             
-            // Trigger debounced fetch of chain data
+            console.log(`>>> Flag.vue handleChainIdChange: About to call debouncedFetchChainData. Current this.chainId: "${this.chainId}".`);
             this.debouncedFetchChainData();
         },
         async runABTestSimulation() {
@@ -1673,15 +1694,17 @@ export default {
             }
         },
         async fetchChainData() {
+            console.log(`>>> Flag.vue fetchChainData EXECUTING. Current this.chainId: "${this.chainId}". Timestamp: ${new Date().toISOString()}`);
             if (!this.chainId || this.chainId.trim() === '') {
                 this.chainData = null;
                 this.showChainData = false; // Ensure this is set
+                console.log('>>> Flag.vue fetchChainData: chainId is empty, returning.');
                 return;
             }
             
             this.chainDataLoading = true;
             try {
-                console.log('Fetching tweet chain data for chain ID:', this.chainId);
+                console.log(`>>> Flag.vue fetchChainData: Attempting to fetch for ID: "${this.chainId}"`);
                 const response = await tgAxios.get(`/tweet-chain/${this.chainId}`);
                 console.log('Tweet chain response:', response.data);
                 this.chainData = response.data;
@@ -1704,18 +1727,30 @@ export default {
             this.newSegment.rolloutPercent = segmentData.rolloutPercent;
             this.createSegment();
         },
+        markAllVariantsStale() {
+            if (this.flag && this.flag.variants) {
+                this.flag.variants.forEach(variant => {
+                    this.$set(variant, 'configStale', true);
+                });
+            }
+        },
     },
     async created() {
         this.debounceSearchUsers = debounce(this.searchUsers, 300);
         this.debounceSearchAuthors = debounce(this.searchAuthors, 300);
         this.debouncedFetchChainData = debounce(this.fetchChainData, 500);
     },
+    watch: {
+        chainId(newValue, oldValue) {
+            console.log(`chainId changed:\n            Old value: ${oldValue}\n            New value: ${newValue}`);
+        }
+    },
     async mounted() {
         this.fetchFlag();
         this.loadAllTags();
         this.fetchTGUsers();
         this.fetchAuthors();
-        this.fetchLLMModels();
+        await this.fetchLLMModels();
         this.fetchPrompts();
 
         // Try to sync any pending runs
@@ -1784,11 +1819,9 @@ export default {
                     newConfig.categoryMatchPrompt = data.categoryMatchPrompt;
                 }
 
-                // Set default provider
-                const providers = Object.values(this.providers);
-                if (providers.length > 0) {
-                    this.selectedProviders = [providers[0].value];
-                    newConfig.llmProvider = providers[0].value;
+                // Sync with what was already selected by fetchLLMModels instead of overriding
+                if (this.selectedProviders.length > 0) {
+                    newConfig.llmProvider = this.selectedProviders.join(',');
                 }
 
                 // Update configuration with all values at once
@@ -2355,5 +2388,20 @@ ol.constraints-inner {
 
 .save-status-icon.failed {
     color: #F56C6C;
+}
+
+.matching-scores-explanation {
+    text-align: center;
+    margin: 20px 0;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border-left: 4px solid #409eff;
+}
+
+.matching-scores-explanation p {
+    margin: 0;
+    color: #606266;
+    font-size: 14px;
 }
 </style>

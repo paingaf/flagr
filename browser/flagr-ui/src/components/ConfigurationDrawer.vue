@@ -507,7 +507,9 @@ export default {
                 });
         },
         updateConfig(newConfig) {
+            console.log('>>> ConfigurationDrawer.vue updateConfig called with:', JSON.parse(JSON.stringify(newConfig)));
             this.config = newConfig;
+            console.log('>>> ConfigurationDrawer.vue this.config is now:', JSON.parse(JSON.stringify(this.config)));
         },
     },
 };
