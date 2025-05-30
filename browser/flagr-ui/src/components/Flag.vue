@@ -235,14 +235,69 @@
                                                         <el-table-column
                                                             resizable
                                                             prop="totalCost"
-                                                            label="Total Cost"
+                                                            label="Total Cost (Estimated)"
                                                             width="120"
                                                         >
                                                             <template slot-scope="scope">
-                                                                {{ scope.row.totalCost ? scope.row.totalCost.toFixed(4) : '0' }}
+                                                                {{ scope.row.totalCost ? scope.row.totalCost.toFixed(6) : '0' }}
                                                             </template>
                                                         </el-table-column>
-                                                        
+
+                                                        <el-table-column
+                                                            resizable
+                                                            label="Input Tokens"
+                                                            width="120"
+                                                            align="center"
+                                                        >
+                                                            <template slot-scope="scope">
+                                                                {{ scope.row.metadata?.inputTokens ?? 'N/A' }}
+                                                            </template>
+                                                        </el-table-column>
+
+                                                        <el-table-column
+                                                            resizable
+                                                            label="Output Tokens"
+                                                            width="130"
+                                                            align="center"
+                                                        >
+                                                            <template slot-scope="scope">
+                                                                {{ scope.row.metadata?.outputTokens ?? 'N/A' }}
+                                                            </template>
+                                                        </el-table-column>
+
+                                                        <el-table-column
+                                                            resizable
+                                                            label="Total Tokens"
+                                                            width="120"
+                                                            align="center"
+                                                        >
+                                                            <template slot-scope="scope">
+                                                                {{ scope.row.metadata?.totalTokens ?? 'N/A' }}
+                                                            </template>
+                                                        </el-table-column>
+
+                                                        <el-table-column
+                                                            resizable
+                                                            label="Input Cost"
+                                                            width="120"
+                                                            align="center"
+                                                        >
+                                                            <template slot-scope="scope">
+                                                                {{ typeof scope.row.metadata?.inputCost === 'number' ? scope.row.metadata.inputCost.toFixed(6) : 'N/A' }}
+                                                            </template>
+                                                        </el-table-column>
+
+                                                        <el-table-column
+                                                            resizable
+                                                            label="Output Cost"
+                                                            width="120"
+                                                            align="center"
+                                                        >
+                                                            <template slot-scope="scope">
+                                                                {{ typeof scope.row.metadata?.outputCost === 'number' ? scope.row.metadata.outputCost.toFixed(6) : 'N/A' }}
+                                                            </template>
+                                                        </el-table-column>
+
                                                         <el-table-column
                                                             resizable
                                                             prop="timeTakenMs"
