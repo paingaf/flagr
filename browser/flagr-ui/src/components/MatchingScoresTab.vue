@@ -88,6 +88,7 @@
         <user-data-display
             :user="selectedUser"
             :show-data="showUserData"
+            :chain-data="chainData"
             @close="showUserData = false"
             :initially-expanded="true"
         ></user-data-display>
