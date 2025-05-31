@@ -166,12 +166,119 @@
 
                 <div
                     v-if="abTestResult"
-                    class="simulation-result"
+                    class="simulation-result ab-test-result-display"
                 >
                     <div class="simulation-header">
                         <h4>A/B Test Simulation Result</h4>
                     </div>
-                    <pre class="simulation-json">{{ JSON.stringify(abTestResult, null, 2) }}</pre>
+
+                    <div v-if="abTestResult.comparison" class="comparison-metrics">
+                        <h5>Comparison Summary</h5>
+                        <el-table
+                            :data="comparisonTableMetrics"
+                            style="width: 100%"
+                            border
+                            class="comparison-table"
+                        >
+                            <el-table-column prop="metricName" label="Metric" width="150"></el-table-column>
+                            
+                            <el-table-column 
+                                v-for="key in abTestVariantKeys" 
+                                :key="key" 
+                                :label="`Variant ${key}`"
+                                align="center"
+                            >
+                                <template slot-scope="scope">
+                                    <span v-if="scope.row.metricName === 'Overall Score' && scope.row[key] !== null">{{ scope.row[key].toFixed(4) }}</span>
+                                    <span v-else-if="scope.row.metricName === 'Cost ($)' && scope.row[key] !== null">{{ scope.row[key].toFixed(6) }}</span>
+                                    <span v-else>{{ scope.row[key] }}</span>
+                                </template>
+                            </el-table-column>
+
+                            <el-table-column 
+                                v-for="key in abTestVariantKeys.filter(k => k !== 'A')" 
+                                :key="`diff_${key}_A`" 
+                                :label="`Diff (Var ${key} - Var A)`"
+                                align="center"
+                            >
+                                <template slot-scope="scope">
+                                    <div v-if="scope.row.metricName === 'Overall Score' && scope.row[`diff_${key}_A`] !== undefined" :class="getDifferenceClass(scope.row[`diff_${key}_A`])">
+                                        {{ scope.row[`diff_${key}_A`].toFixed(4) }}
+                                        <i :class="getDifferenceIcon(scope.row[`diff_${key}_A`])"></i>
+                                    </div>
+                                    <div v-else-if="scope.row.metricName === 'Cost ($)' && scope.row[`diff_${key}_A`] !== undefined" :class="getDifferenceClass(scope.row[`diff_${key}_A`], true)">
+                                        {{ scope.row[`diff_${key}_A`].toFixed(6) }}
+                                        <i :class="getDifferenceIcon(scope.row[`diff_${key}_A`], true)"></i>
+                                    </div>
+                                    <span v-else-if="scope.row.metricName === 'Latency'">-</span>
+                                    <span v-else>N/A</span>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+
+                    <!-- Detailed Matches per Variant -->
+                    <div v-if="abTestVariantDetails.length > 0" class="detailed-variant-matches">
+                        <h5>Detailed Variant Matches</h5>
+                        <el-tabs type="border-card">
+                            <el-tab-pane 
+                                v-for="variantResult in abTestVariantDetails" 
+                                :key="variantResult.keyName" 
+                                :label="variantResult.name"
+                            >
+                                <div v-if="variantResult.scores && variantResult.scores.matches && variantResult.scores.matches.length > 0" class="matches-list-ab">
+                                    <el-collapse accordion class="match-details-collapse-ab">
+                                        <el-collapse-item 
+                                            v-for="(match, index) in variantResult.scores.matches" 
+                                            :key="`${variantResult.keyName}-match-${index}`"
+                                            :name="`${variantResult.keyName}-match-${index}`"
+                                            class="match-item-ab"
+                                        >
+                                            <template slot="title">
+                                                <div class="match-title-ab">
+                                                    <span class="match-tier-indicator-ab" :class="getTierClass(match.tier)"></span>
+                                                    <span class="match-category-ids-ab">
+                                                        <strong>User:</strong> {{ extractCategoryName(match.userCategoryId) }} 
+                                                        <i class="el-icon-right"></i> 
+                                                        <strong>Tweet:</strong> {{ extractCategoryName(match.tweetCategoryId) }}
+                                                    </span>
+                                                    <el-tag size="mini" :type="getTierTagType(match.tier)" effect="dark" class="match-tier-tag-ab">{{ match.tier }}</el-tag>
+                                                    <span class="match-score-ab">Score: {{ match.score ? match.score.toFixed(4) : 'N/A' }}</span>
+                                                </div>
+                                            </template>
+                                            <div class="match-details-ab">
+                                                <div class="match-detail-grid-ab">
+                                                    <div><strong>Relationship:</strong> {{ match.relationship }}</div>
+                                                    <div><strong>Hop Length:</strong> {{ match.hopLength }}</div>
+                                                    <div><strong>Relation Score:</strong> {{ match.relationScore ? match.relationScore.toFixed(4) : 'N/A' }}</div>
+                                                    <div><strong>Type Multiplier:</strong> {{ match.typeMultiplier ? match.typeMultiplier.toFixed(4) : 'N/A' }}</div>
+                                                    <div><strong>Interaction Boost:</strong> {{ match.interactionBoost ? match.interactionBoost.toFixed(4) : 'N/A' }}</div>
+                                                    <div><strong>Time Decay:</strong> {{ match.timeDecayFactor ? match.timeDecayFactor.toFixed(4) : 'N/A' }}</div>
+                                                    <div v-if="match.authorTweetCount">
+                                                        <strong>Author Tweet Counts:</strong> 
+                                                        User Cat: {{ match.authorTweetCount.userCategory }}, 
+                                                        Tweet Cat: {{ match.authorTweetCount.chainCategory }}
+                                                    </div>
+                                                    <div><strong>Common Categories Boost:</strong> {{ match.commonCategoriesBoost ? match.commonCategoriesBoost.toFixed(4) : 'N/A' }}</div>
+                                                    <div><strong>Relationship Tweet Count:</strong> {{ match.relationshipTweetCount }}</div>
+                                                </div>
+                                            </div>
+                                        </el-collapse-item>
+                                    </el-collapse>
+                                </div>
+                                <div v-else>
+                                    <p>No category matches found for {{ variantResult.name }}.</p>
+                                </div>
+                            </el-tab-pane>
+                        </el-tabs>
+                    </div>
+                    
+                    <!-- Collapsible Raw JSON -->
+                    <el-collapse class="raw-json-collapse">
+                        <el-collapse-item title="Raw A/B Test Result JSON" name="rawABResult">
+                            <pre class="simulation-json">{{ JSON.stringify(abTestResult, null, 2) }}</pre>
+                        </el-collapse-item>
+                    </el-collapse>
                 </div>
             </div>
         </el-card>
@@ -286,6 +393,99 @@ export default {
             default: false,
         },
     },
+    computed: {
+        scoreDifference() {
+            if (this.abTestResult && this.abTestResult.comparison && this.abTestResult.comparison.scoreMetrics) {
+                const { scoreA, scoreB } = this.abTestResult.comparison.scoreMetrics;
+                if (typeof scoreA === 'number' && typeof scoreB === 'number') {
+                    return scoreB - scoreA;
+                }
+            }
+            return null;
+        },
+        costDifference() {
+            if (this.abTestResult && this.abTestResult.comparison && this.abTestResult.comparison.costMetrics) {
+                const { costA, costB, difference } = this.abTestResult.comparison.costMetrics;
+                if (typeof difference === 'number') return difference;
+                if (typeof costA === 'number' && typeof costB === 'number') {
+                    return costB - costA;
+                }
+            }
+            return null;
+        },
+        abTestVariantDetails() {
+            if (!this.abTestResult) return [];
+            const variantDetails = [];
+            const variantResultKeys = Object.keys(this.abTestResult).filter(key => 
+                key.endsWith('TestResults') && key.length === 'ATestResults'.length
+            );
+            variantResultKeys.sort();
+            for (const key of variantResultKeys) {
+                const variantLetter = key.charAt(0);
+                variantDetails.push({
+                    name: `Variant ${variantLetter}`,
+                    keyName: variantLetter,
+                    ...this.abTestResult[key]
+                });
+            }
+            return variantDetails;
+        },
+        abTestVariantKeys() {
+            return this.abTestVariantDetails.map(v => v.keyName).sort();
+        },
+        comparisonTableMetrics() {
+            if (!this.abTestResult || !this.abTestVariantKeys.length) return [];
+
+            const variants = this.abTestVariantKeys;
+            const metrics = [];
+            const comparisonData = this.abTestResult.comparison || {};
+
+            // --- Score Metric --- 
+            const scoreRow = { metricName: 'Overall Score' };
+            let scoreA_value = null;
+            variants.forEach(vKey => {
+                const resultKey = `${vKey}TestResults`;
+                const score = this.abTestResult[resultKey]?.scores?.stats?.finalScore;
+                scoreRow[vKey] = typeof score === 'number' ? score : null;
+                if (vKey === 'A') scoreA_value = scoreRow[vKey];
+            });
+            variants.forEach(vKey => {
+                if (vKey !== 'A' && scoreA_value !== null && scoreRow[vKey] !== null) {
+                    scoreRow[`diff_${vKey}_A`] = scoreRow[vKey] - scoreA_value;
+                }
+            });
+            metrics.push(scoreRow);
+
+            // --- Latency Metric --- 
+            const latencyRow = { metricName: 'Latency' };
+            const perfMetrics = comparisonData.performanceMetrics || {};
+            variants.forEach(vKey => {
+                latencyRow[vKey] = perfMetrics[`latency${vKey}`] || 'N/A';
+            });
+            metrics.push(latencyRow);
+
+            // --- Cost Metric --- 
+            const costRow = { metricName: 'Cost ($)' };
+            const costMetricsData = comparisonData.costMetrics || {};
+            let costA_value = null;
+            variants.forEach(vKey => {
+                const costVal = costMetricsData[`cost${vKey}`];
+                costRow[vKey] = typeof costVal === 'number' ? costVal : null;
+                if (vKey === 'A') costA_value = costRow[vKey];
+            });
+            if (typeof costMetricsData.difference === 'number' && variants.includes('B') && costA_value !== null && costRow['B'] !== null) {
+                costRow[`diff_B_A`] = costMetricsData.difference;
+            }
+            variants.forEach(vKey => {
+                if (vKey !== 'A' && typeof costRow[`diff_${vKey}_A`] === 'undefined' && costA_value !== null && costRow[vKey] !== null) {
+                    costRow[`diff_${vKey}_A`] = costRow[vKey] - costA_value;
+                }
+            });
+            metrics.push(costRow);
+            
+            return metrics;
+        }
+    },
     methods: {
         handleUserSelect(user) {
             this.$emit('user-select', user);
@@ -314,6 +514,52 @@ export default {
         cancelPromptEdit() {
             this.$emit('cancel-prompt-edit');
         },
+        getDifferenceClass(difference, lowerIsBetter = false) {
+            if (difference === null || difference === 0) return 'neutral-difference';
+            if (lowerIsBetter) {
+                return difference < 0 ? 'positive-difference' : 'negative-difference';
+            }
+            return difference > 0 ? 'positive-difference' : 'negative-difference';
+        },
+        getDifferenceIcon(difference, lowerIsBetter = false) {
+            if (difference === null || difference === 0) return ''; // No icon for no difference
+            let iconClass = '';
+            if (lowerIsBetter) {
+                iconClass = difference < 0 ? 'el-icon-top' : 'el-icon-bottom';
+            } else {
+                iconClass = difference > 0 ? 'el-icon-top' : 'el-icon-bottom';
+            }
+            const trendClass = this.getDifferenceClass(difference, lowerIsBetter);
+            return `${iconClass} ${trendClass}`;
+        },
+        // Copied from VariantCard.vue for displaying detailed matches
+        getTierClass(tier) {
+            if (!tier) return 'tier-unknown';
+            return `tier-${tier.toLowerCase().replace('_', '-')}`;
+        },
+        getTierTagType(tier) {
+            if (!tier) return 'info';
+            switch (tier.toUpperCase()) {
+                case 'EXCELLENT':
+                    return 'success';
+                case 'GOOD':
+                    return 'primary';
+                case 'FAIR':
+                    return 'warning';
+                case 'POOR':
+                    return 'danger';
+                default:
+                    return 'info';
+            }
+        },
+        extractCategoryName(categoryId) {
+            if (!categoryId) return 'N/A';
+            const parts = categoryId.split('-');
+            if (parts.length > 2) {
+                return parts.slice(2).join(' ').replace(/\b\w/g, l => l.toUpperCase());
+            }
+            return categoryId;
+        }
     },
 };
 </script>
@@ -404,5 +650,182 @@ export default {
     word-wrap: break-word;
     max-height: 300px;
     overflow-y: auto;
+}
+
+/* A/B Test Result Display Styles */
+.ab-test-result-display h5 {
+    margin-top: 15px;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+    color: #303133;
+}
+
+.comparison-row {
+    margin-bottom: 15px;
+}
+
+.metric-card .el-card__header {
+    padding: 10px 15px;
+    background-color: #fafafa;
+    font-weight: bold;
+    font-size: 0.95em;
+    color: #555;
+}
+
+.metric-card .el-card__body {
+    padding: 15px;
+    font-size: 0.9em;
+    line-height: 1.6;
+}
+
+.metric-card .el-card__body div {
+    margin-bottom: 5px;
+}
+
+.positive-difference {
+    color: #67c23a; /* Element UI Success Green */
+    font-weight: bold;
+}
+
+.negative-difference {
+    color: #f56c6c; /* Element UI Danger Red */
+    font-weight: bold;
+}
+
+.neutral-difference {
+    color: #909399; /* Element UI Info Gray */
+}
+
+.positive-difference .el-icon-top,
+.negative-difference .el-icon-bottom {
+    font-weight: bold; /* Icons inherit color, make them bold too */
+}
+
+.raw-json-collapse {
+    margin-top: 15px;
+}
+
+.raw-json-collapse .el-collapse-item__header {
+    font-size: 0.9em; /* Smaller header for raw JSON */
+    color: #606266;
+}
+
+/* Comparison Table Styles */
+.comparison-table {
+    margin-bottom: 20px; /* Space below the table */
+}
+
+.comparison-table .el-table__header th {
+    background-color: #fafafa; /* Light background for header */
+    color: #303133; /* Darker text for header */
+    font-weight: bold;
+}
+
+.comparison-table .el-table__row td {
+    font-size: 0.9em;
+}
+
+/* Styles for Detailed Variant Matches in A/B Test */
+.detailed-variant-matches h5 {
+    margin-top: 20px;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+    color: #303133;
+}
+
+.matches-list-ab {
+    margin-top: 10px;
+}
+
+.match-details-collapse-ab .el-collapse-item__header {
+    font-size: 13px;
+    border-bottom: 1px solid #f0f2f5;
+}
+
+.match-details-collapse-ab .el-collapse-item__wrap {
+    border-bottom: none;
+}
+
+.match-item-ab {
+    background-color: #fff;
+    border-radius: 3px;
+    margin-bottom: 8px;
+}
+
+.match-title-ab {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 5px 0;
+}
+
+.match-tier-indicator-ab {
+    min-width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
+/* Tier specific colors are reused from VariantCard or can be defined here if not global */
+/* .tier-excellent, .tier-good, etc. */
+
+.match-category-ids-ab {
+    flex-grow: 1;
+    font-size: 13px;
+    color: #555;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-right: 10px;
+}
+
+.match-category-ids-ab strong {
+    color: #303133;
+}
+
+.match-category-ids-ab .el-icon-right {
+    margin: 0 5px;
+    color: #c0c4cc;
+}
+
+.match-tier-tag-ab {
+    margin-left: auto;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
+.match-score-ab {
+    font-size: 13px;
+    font-weight: bold;
+    color: #303133;
+    min-width: 100px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.match-details-ab {
+    padding: 10px 15px;
+    background-color: #fbfdff;
+    font-size: 12px;
+    color: #606266;
+}
+
+.match-detail-grid-ab {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 8px;
+}
+
+.match-detail-grid-ab div {
+    padding: 4px 0;
+}
+
+.match-detail-grid-ab strong {
+    color: #303133;
+}
+
+.el-tabs--border-card > .el-tabs__content {
+    padding: 10px; /* Reduce padding for nested tabs content */
 }
 </style> 

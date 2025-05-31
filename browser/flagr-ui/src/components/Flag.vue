@@ -19,26 +19,6 @@
                     @create-segment="handleCreateSegmentFromDialog"
                 ></create-segment-dialog>
 
-                <el-dialog
-                    title="Create new variant"
-                    :visible.sync="dialogNewVariantVisible"
-                >
-                    <div>
-                        <p>
-                            <el-input
-                                placeholder="Variant key"
-                                v-model="newVariant.key"
-                            ></el-input>
-                        </p>
-                        <el-button
-                            class="width--full"
-                            :disabled="!newVariant.key"
-                            @click.prevent="createVariantAndCloseDialog"
-                            >Create Variant</el-button
-                        >
-                    </div>
-                </el-dialog>
-
                 <create-variant-dialog
                     :visible.sync="dialogNewVariantVisible"
                     @create-variant="handleCreateVariantFromDialog"
@@ -886,8 +866,12 @@ export default {
                 ).then((response) => {
                     console.log('Evaluation response:', response.data);
                     this.$set(variant, 'evaluationResult', response.data);
+                    // Access the finalScore from the nested stats object
+                    const finalScore = response.data && response.data.scores && response.data.scores.stats && typeof response.data.scores.stats.finalScore === 'number' 
+                        ? response.data.scores.stats.finalScore.toFixed(4) 
+                        : 'N/A';
                     this.$message.success(
-                        `Evaluation Score: ${response.data.score}`
+                        `Evaluation Complete! Final Score: ${finalScore}`
                     );
                 }).catch((err) => {
                     console.error('Error evaluating variant:', err);
@@ -1337,6 +1321,10 @@ export default {
                     this.$set(variant, 'configStale', true);
                 });
             }
+        },
+        handleCreateVariantFromDialog(variant) {
+            this.newVariant = variant;
+            this.createVariant();
         },
     },
     async created() {

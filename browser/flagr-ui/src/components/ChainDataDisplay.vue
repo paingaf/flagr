@@ -38,7 +38,7 @@
                         </div>
                         
                         <div class="chain-content-section" v-if="chainData.categoryMatches && chainData.categoryMatches.length">
-                            <h5>Category Matches</h5>
+                            <h5>Category Matches <span v-if="categoryMatchModelName" class="model-name-display">(by {{ categoryMatchModelName }})</span></h5>
                             <div v-for="(match, matchIndex) in chainData.categoryMatches" :key="matchIndex">
                                 <div v-if="match.categories">
                                     <div v-for="(categories, level) in match.categories" :key="level" class="category-level">
@@ -112,6 +112,12 @@ export default {
         expandedIcon() {
             return this.isExpanded ? 'el-icon-arrow-down' : 'el-icon-arrow-right';
         },
+        categoryMatchModelName() {
+            if (this.chainData && this.chainData.categoryMatches && this.chainData.categoryMatches.length > 0 && this.chainData.categoryMatches[0].llmModel) {
+                return this.chainData.categoryMatches[0].llmModel;
+            }
+            return null;
+        }
     },
     watch: {
         showData(newVal) {
@@ -220,6 +226,12 @@ export default {
     font-size: 14px;
     color: #606266;
     padding: 0;
+}
+
+.model-name-display {
+    font-weight: normal;
+    font-size: 0.9em;
+    color: #909399; /* Element UI Info Gray for less emphasis */
 }
 
 .chain-content {

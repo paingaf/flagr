@@ -121,9 +121,11 @@ export default {
                 return { hasCategories: false, root: [], branch: [], leaf: [] };
             }
 
-            // Find the watched account for this specific author
+            const authorUsernameLower = this.chainAuthorUsername.toLowerCase();
+
+            // Find the watched account for this specific author (case-insensitive)
             const watchedAccount = this.user.watchedAccounts.find(account => 
-                account.username === this.chainAuthorUsername
+                account.username.toLowerCase() === authorUsernameLower
             );
 
             if (!watchedAccount || !watchedAccount.categories) {
@@ -152,18 +154,19 @@ export default {
             };
         },
         displayableAuthorCategories() {
-            const filteredCategories = {};
+            const allLevels = {
+                root: [],
+                branch: [],
+                leaf: []
+            };
             
-            // Always include root, and include other levels that have categories
-            Object.keys(this.authorSpecificCategories).forEach(level => {
-                if (level !== 'hasCategories') {
-                    if (level === 'root' || (Array.isArray(this.authorSpecificCategories[level]) && this.authorSpecificCategories[level].length > 0)) {
-                        filteredCategories[level] = this.authorSpecificCategories[level] || [];
-                    }
-                }
-            });
+            // Merge with actual categories, ensuring all levels are present
+            const categoriesToDisplay = { ...allLevels, ...this.authorSpecificCategories };
+
+            // Remove 'hasCategories' if it exists from the merge
+            delete categoriesToDisplay.hasCategories;
             
-            return filteredCategories;
+            return categoriesToDisplay;
         },
         extractedCategories() {
             if (!this.user || !this.user.watchedAccounts || !Array.isArray(this.user.watchedAccounts)) {
@@ -204,18 +207,19 @@ export default {
             };
         },
         displayableCategories() {
-            const filteredCategories = {};
+            const allLevels = {
+                root: [],
+                branch: [],
+                leaf: []
+            };
+
+            // Merge with actual categories, ensuring all levels are present
+            const categoriesToDisplay = { ...allLevels, ...this.extractedCategories };
+
+            // Remove 'hasCategories' if it exists from the merge
+            delete categoriesToDisplay.hasCategories;
             
-            // Always include root, and include other levels that have categories
-            Object.keys(this.extractedCategories).forEach(level => {
-                if (level !== 'hasCategories') {
-                    if (level === 'root' || (Array.isArray(this.extractedCategories[level]) && this.extractedCategories[level].length > 0)) {
-                        filteredCategories[level] = this.extractedCategories[level] || [];
-                    }
-                }
-            });
-            
-            return filteredCategories;
+            return categoriesToDisplay;
         }
     },
     watch: {
