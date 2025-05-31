@@ -120,7 +120,7 @@
         <el-card class="variants-container">
             <div slot="header" class="clearfix">
                 <div class="variants-header">
-                    <h2>Variants</h2>
+                    <h2>Variants <span class="ab-test-limit-note">(A/B Test: Max 2 for now)</span></h2>
                     <el-button 
                         type="primary" 
                         size="small" 
@@ -620,6 +620,13 @@ export default {
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+.variants-header h2 .ab-test-limit-note {
+    font-size: 0.7em; /* Smaller font size */
+    font-weight: normal; /* Normal weight */
+    color: #909399; /* Subdued color (Element UI Info Gray) */
+    margin-left: 8px; /* Space from the main title */
 }
 
 .variants-container-inner {

@@ -177,9 +177,40 @@ function processSegment(segment) {
 
 function processVariant(variant) {
     if (typeof variant.attachment === 'string') {
-        variant.attachment = JSON.parse(variant.attachment);
+        try {
+            variant.attachment = JSON.parse(variant.attachment);
+        } catch (e) {
+            console.error('Failed to parse variant attachment JSON for variant ID:', variant.id, e);
+            variant.attachment = {}; // Default to empty object on error
+        }
+    } else if (!variant.attachment) {
+         variant.attachment = {}; // Ensure attachment is an object
     }
-    variant.configStale = true;
+
+    // Attempt to create a snapshot from the loaded attachment
+    // This definition of what constitutes a "complete" applied config should match applyConfigToVariant
+    const expectedKeys = ['WEIGHTS', 'USER_PREFERENCES', 'CHAIN_ID', 'TWEET_URL', 'categoryMatchPrompt', 'promptId', 'llmProvider'];
+    let isCompleteAttachment = expectedKeys.every(key => variant.attachment.hasOwnProperty(key));
+
+    if (isCompleteAttachment) {
+        variant.appliedConfigSnapshot = {
+            WEIGHTS: JSON.parse(JSON.stringify(variant.attachment.WEIGHTS || {})),
+            USER_PREFERENCES: variant.attachment.USER_PREFERENCES ? JSON.parse(JSON.stringify(variant.attachment.USER_PREFERENCES)) : null,
+            CHAIN_ID: variant.attachment.CHAIN_ID,
+            TWEET_URL: variant.attachment.TWEET_URL,
+            categoryMatchPrompt: variant.attachment.categoryMatchPrompt,
+            promptId: variant.attachment.promptId,
+            llmProvider: variant.attachment.llmProvider
+        };
+        // If we successfully created a snapshot from its loaded state, assume it's not stale initially.
+        // checkAllVariantsStaleness() will verify the *last* variant against current global config later.
+        variant.configStale = false; 
+    } else {
+        // If the attachment doesn't look like a full configuration snapshot, mark it as stale.
+        // It will require "Apply Configuration" to get a full snapshot.
+        variant.configStale = true;
+        variant.appliedConfigSnapshot = null; // Ensure no partial snapshot
+    }
 }
 
 // Helper function to remove UI-only properties before sending to backend
@@ -358,23 +389,36 @@ export default {
             }
         },
         applyConfigToVariant(variant) {
-            const currentConfig = this.$refs.configDrawer.config;
-            console.log('>>> Flag.vue applyConfigToVariant: currentConfig from drawer:', JSON.parse(JSON.stringify(currentConfig)));
+            const weightsConfig = JSON.parse(JSON.stringify(this.$refs.configDrawer.config.WEIGHTS || {}));
+            const currentUserPreferences = this.selectedUser ? JSON.parse(JSON.stringify(this.selectedUser)) : null;
 
-            if (!variant.attachment) {
-                variant.attachment = {};
-            }
+            // Preserve any existing keys in the attachment that are not part of the core config set
+            const otherAttachmentProperties = { ...variant.attachment };
+            const coreConfigKeys = ['CHAIN_ID', 'TWEET_URL', 'USER_PREFERENCES', 'llmProvider', 'promptId', 'categoryMatchPrompt', 'WEIGHTS'];
+            coreConfigKeys.forEach(key => delete otherAttachmentProperties[key]);
 
-            const configToApply = JSON.parse(JSON.stringify(currentConfig));
-
-            variant.attachment = {
-                ...variant.attachment,
-                ...configToApply,
+            // Define the new attachment with a specific key order for core properties
+            const newAttachment = {
+                ...otherAttachmentProperties, // Start with other properties (they will appear first or as per JS default)
+                llmProvider: this.selectedProvider,
+                promptId: this.selectedPrompt || null,
+                CHAIN_ID: this.chainId,
+                TWEET_URL: this.dagText,
+                USER_PREFERENCES: currentUserPreferences,
+                categoryMatchPrompt: this.promptText,
+                WEIGHTS: weightsConfig,
+                // Add any other global settings in a defined order if necessary
             };
             
-            this.$set(variant, 'configStale', false);
+            console.log('>>> Flag.vue applyConfigToVariant: Applying full config with ordered keys:', JSON.parse(JSON.stringify(newAttachment)));
 
-            this.putVariant(variant);
+            variant.attachment = newAttachment; // Assign the newly ordered object
+            
+            this.$set(variant, 'configStale', false);
+            // Store a snapshot of the applied configuration (which now has the ordered keys)
+            this.$set(variant, 'appliedConfigSnapshot', JSON.parse(JSON.stringify(newAttachment)));
+
+            this.putVariant(variant); 
         },
         handleConfigUpdate(newConfig) {
             console.log('Configuration updated:', newConfig);
@@ -684,7 +728,7 @@ export default {
             this.selectedUser = user;
             this.userSearchInput = user.username;
             this.showUserData = true;
-            this.markAllVariantsStale();
+            this.checkAllVariantsStaleness();
             
             if (this.$refs.configDrawer) {
                 const currentConfig = this.$refs.configDrawer.config;
@@ -737,7 +781,7 @@ export default {
                 });
             }
             this.authorSearchInput = author.value;
-            this.markAllVariantsStale();
+            this.checkAllVariantsStaleness();
         },
         handleTweetUrlChange(value) {
             if (this.$refs.configDrawer) {
@@ -747,7 +791,7 @@ export default {
                     TWEET_URL: value,
                 });
             }
-            this.markAllVariantsStale();
+            this.checkAllVariantsStaleness();
         },
         handleContextChange(value) {
             if (this.$refs.configDrawer) {
@@ -761,7 +805,7 @@ export default {
         handlePromptInput(value) {
             // Always check if the prompt has been modified, even if no prompt is selected
             this.isPromptModified = value !== this.originalPromptText;
-            this.markAllVariantsStale();
+            this.checkAllVariantsStaleness();
 
             if (this.$refs.configDrawer) {
                 const currentConfig = this.$refs.configDrawer.config;
@@ -831,7 +875,7 @@ export default {
                 this.promptText = selectedPrompt.content;
                 this.originalPromptText = selectedPrompt.content;
                 this.isPromptModified = false;
-                this.markAllVariantsStale();
+                this.checkAllVariantsStaleness();
 
                 // Update both prompt text and promptId in config
                 if (this.$refs.configDrawer) {
@@ -965,13 +1009,13 @@ export default {
                         llmProvider: values,
                     });
                 }
-                this.markAllVariantsStale();
+                this.checkAllVariantsStaleness();
             }
         },
         handleChainIdChange(value) {
             console.log(`>>> Flag.vue handleChainIdChange: Received value: "${value}". Current this.chainId (due to v-model): "${this.chainId}". Timestamp: ${new Date().toISOString()}`);
             if (this.flag && this.flag.key) {
-                this.markAllVariantsStale();
+                this.checkAllVariantsStaleness();
             }
 
             if (this.$refs.configDrawer) {
@@ -1315,12 +1359,38 @@ export default {
             this.newSegment.rolloutPercent = segmentData.rolloutPercent;
             this.createSegment();
         },
-        markAllVariantsStale() {
-            if (this.flag && this.flag.variants) {
-                this.flag.variants.forEach(variant => {
-                    this.$set(variant, 'configStale', true);
-                });
+        checkAllVariantsStaleness() {
+            if (!this.flag || !this.flag.variants || this.flag.variants.length === 0) return;
+
+            const lastVariantIndex = this.flag.variants.length - 1;
+            const lastVariant = this.flag.variants[lastVariantIndex];
+
+            // Construct the current global configuration state
+            const currentGlobalConfig = {
+                WEIGHTS: JSON.parse(JSON.stringify(this.$refs.configDrawer.config.WEIGHTS || {})),
+                USER_PREFERENCES: this.selectedUser ? JSON.parse(JSON.stringify(this.selectedUser)) : null,
+                CHAIN_ID: this.chainId,
+                TWEET_URL: this.dagText,
+                categoryMatchPrompt: this.promptText,
+                promptId: this.selectedPrompt || null,
+                llmProvider: this.selectedProvider,
+            };
+
+            // Only check the last variant for staleness based on global config changes
+            if (!lastVariant.appliedConfigSnapshot) {
+                this.$set(lastVariant, 'configStale', true);
+            } else {
+                const snapshotString = JSON.stringify(lastVariant.appliedConfigSnapshot);
+                const currentConfigString = JSON.stringify(currentGlobalConfig);
+                if (snapshotString !== currentConfigString) {
+                    this.$set(lastVariant, 'configStale', true);
+                } else {
+                    this.$set(lastVariant, 'configStale', false);
+                }
             }
+            
+            // Older variants are not automatically re-evaluated for staleness by this method.
+            // Their configStale status is determined on load by processVariant() or when Apply is explicitly clicked.
         },
         handleCreateVariantFromDialog(variant) {
             this.newVariant = variant;
@@ -1371,7 +1441,6 @@ export default {
                     const run = item.run || item;
                     
                     // Set saveStatus to true for all results in loaded runs
-                    // (if it's in the database, it was saved successfully)
                     if (run.results && Array.isArray(run.results)) {
                         run.results.forEach(result => {
                             result.saveStatus = true;
@@ -1382,7 +1451,6 @@ export default {
                 });
                 
                 if (this.categorizationRuns.length > 0) {
-                    // Get the highest run number to continue counting from there
                     this.categorizationRunCount = Math.max(
                         ...this.categorizationRuns.map(run => 
                             run.metadata && run.metadata.runNumber 
@@ -1391,8 +1459,6 @@ export default {
                         ), 
                         0
                     );
-                    
-                    // Set the most recent run as the current result
                     this.categorizationResult = this.categorizationRuns[0].results;
                 }
             }
@@ -1403,31 +1469,30 @@ export default {
         try {
             const response = await tgAxios.get('/app-config');
             const data = response.data;
-
-            // Initialize configuration with any existing values
             if (this.$refs.configDrawer) {
                 const currentConfig = this.$refs.configDrawer.config;
                 const newConfig = { ...currentConfig };
-
-                // Set categoryMatchPrompt from API response
                 if (data.categoryMatchPrompt) {
                     this.promptText = data.categoryMatchPrompt;
                     this.originalPromptText = data.categoryMatchPrompt;
                     newConfig.categoryMatchPrompt = data.categoryMatchPrompt;
                 }
-
-                // Sync with what was already selected by fetchLLMModels instead of overriding
                 if (this.selectedProviders.length > 0) {
                     newConfig.llmProvider = this.selectedProviders.join(',');
+                } else if (data.llmProvider) { // Fallback to app-config if not set by fetchLLMModels
+                     newConfig.llmProvider = data.llmProvider;
                 }
-
-                // Update configuration with all values at once
                 this.$refs.configDrawer.updateConfig(newConfig);
             }
         } catch (error) {
             console.error('Error fetching app config:', error);
             this.$message.error('Failed to fetch app configuration');
         }
+        
+        // After all initial data is fetched and processed, check staleness of the last variant.
+        this.$nextTick(() => {
+            this.checkAllVariantsStaleness();
+        });
     },
 };
 </script>
@@ -1436,6 +1501,10 @@ export default {
 h5 {
     padding: 0;
     margin: 10px 0 5px;
+}
+
+.flag-container {
+    padding-bottom: 50px;
 }
 
 .grabbable {
