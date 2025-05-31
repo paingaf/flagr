@@ -10,12 +10,6 @@
     "dev": "echo \"⚠️  WARNING: This project requires Node.js v16! Current version: $(node -v). Please run: nvm use 16\" && read -p \"Press Enter to continue or Ctrl+C to cancel...\" && cd ../.. && docker-compose -f af-custom/docker-compose.dev.yml up -d && cd browser/flagr-ui && npm run serve",
     "prepare": "husky"
   },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged",
-      "pre-push": "npm run lint"
-    }
-  },
   "lint-staged": {
     "*.{js,vue}": "vue-cli-service lint"
   },
