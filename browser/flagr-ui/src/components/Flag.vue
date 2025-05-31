@@ -190,7 +190,7 @@ function processVariant(variant) {
     // Attempt to create a snapshot from the loaded attachment
     // This definition of what constitutes a "complete" applied config should match applyConfigToVariant
     const expectedKeys = ['WEIGHTS', 'USER_PREFERENCES', 'CHAIN_ID', 'TWEET_URL', 'categoryMatchPrompt', 'promptId', 'llmProvider'];
-    let isCompleteAttachment = expectedKeys.every(key => variant.attachment.hasOwnProperty(key));
+    let isCompleteAttachment = expectedKeys.every(key => Object.hasOwn(variant.attachment, key));
 
     if (isCompleteAttachment) {
         variant.appliedConfigSnapshot = {
