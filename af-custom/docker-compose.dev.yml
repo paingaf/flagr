@@ -18,39 +18,58 @@ services:
       - ./data:/data
       # Mount env variables file as volume for easy updating
       - ../browser/flagr-ui/.env.development:/browser/flagr-ui/.env:ro
+  
   neo4j-test:
-    image: neo4j:5.26
+    build:
+      context: ./neo4j
+      dockerfile: Dockerfile
+    env_file:
+      - ./neo4j/.env.neo4j.local
     ports:
-      - '7484:7474'
-      - '7697:7687'
+      - '${LOCAL_HTTP_PORT:-7484}:7474'
+      - '${LOCAL_BOLT_PORT:-7697}:7687'
     environment:
-      - NEO4J_AUTH=neo4j/password
-      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
-      - NEO4J_initial_dbms_default__database=neo4j
-      - NEO4J_dbms_security_procedures_unrestricted=apoc.*
-      - NEO4J_dbms_security_procedures_allowlist=apoc.*
-      - NEO4J_server_config_strict__validation_enabled=false
-
+      - NEO4J_AUTH=${LOCAL_USERNAME:-neo4j}/${LOCAL_PASSWORD:-password}
+      - SERVER_BOLT_LISTEN_ADDRESS=0.0.0.0:7687
+      - SERVER_BOLT_ADVERTISED_ADDRESS=${LOCAL_BOLT_ADVERTISED_ADDRESS:-localhost:7687}
+      - SERVER_HTTP_LISTEN_ADDRESS=0.0.0.0:7474
+      - SERVER_HTTP_ADVERTISED_ADDRESS=${LOCAL_HTTP_ADVERTISED_ADDRESS:-localhost:7474}
+      - SERVER_DEFAULT_LISTEN_ADDRESS=0.0.0.0
+      - SERVER_DEFAULT_ADVERTISED_ADDRESS=${LOCAL_DEFAULT_ADVERTISED_ADDRESS:-localhost}
+      - NEO4J_server_memory_heap_initial__size=${LOCAL_HEAP_INITIAL_SIZE:-512m}
+      - NEO4J_server_memory_heap_max__size=${LOCAL_HEAP_MAX_SIZE:-512m}
+      - SERVER_MEMORY_PAGECACHE_SIZE=${LOCAL_PAGECACHE_SIZE:-1g}
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=${LOCAL_ACCEPT_LICENSE_AGREEMENT:-yes}
+      - NEO4J_initial_dbms_default__database=${LOCAL_INITIAL_DB_DEFAULT_DATABASE:-neo4j}
+      - NEO4J_dbms_security_procedures_unrestricted=${LOCAL_DBMS_SECURITY_PROCEDURES_UNRESTRICTED:-apoc.*}
+      - NEO4J_dbms_security_procedures_allowlist=${LOCAL_DBMS_SECURITY_PROCEDURES_ALLOWLIST:-apoc.*}
+      - SERVER_CONFIG_STRICT__VALIDATION_ENABLED=${LOCAL_SERVER_CONFIG_STRICT_VALIDATION_ENABLED:-false}
+      - SERVER_BOLT_TLS_LEVEL=${LOCAL_SERVER_BOLT_TLS_LEVEL:-REQUIRED}
+      - NEO4J_dbms_ssl_policy_bolt_enabled=${LOCAL_DBMS_SSL_POLICY_BOLT_ENABLED:-true}
+      - NEO4J_dbms_ssl_policy_bolt_base__directory=${LOCAL_DBMS_SSL_POLICY_BOLT_BASE_DIRECTORY:-/var/lib/neo4j/certificates/bolt}
+      - NEO4J_dbms_ssl_policy_bolt_private__key=${LOCAL_DBMS_SSL_POLICY_BOLT_PRIVATE_KEY:-private.key}
+      - NEO4J_dbms_ssl_policy_bolt_public__certificate=${LOCAL_DBMS_SSL_POLICY_BOLT_PUBLIC_CERTIFICATE:-public.crt}
+      - NEO4J_dbms_ssl_policy_bolt_client__auth=${LOCAL_DBMS_SSL_POLICY_BOLT_CLIENT_AUTH:-NONE}
+      - LOCAL_CERT_CN=${LOCAL_CERT_CN:-localhost}
     volumes:
       - neo4j_data:/data
-      - neo4j_logs:/logs
-      - ./plugins:/var/lib/neo4j/plugins
     healthcheck:
       test:
         [
           'CMD',
           'cypher-shell',
           '-u',
-          '${NEO4J_USERNAME:-neo4j}',
+          '${LOCAL_USERNAME:-neo4j}',
           '-p',
-          '${NEO4J_PASSWORD:-password}',
+          '${LOCAL_PASSWORD:-password}',
           '--non-interactive',
           'RETURN 1;',
         ]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 30s 
+      start_period: 30s
+    restart: unless-stopped  
       
 volumes:
   neo4j_data:
