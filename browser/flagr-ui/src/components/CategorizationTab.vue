@@ -33,10 +33,10 @@
             </el-select>
 
             <el-select
-                v-model="selectedPrompt"
+                :value="selectedPrompt"
                 placeholder="Select Prompt"
                 class="prompt-select"
-                @change="handlePromptChange"
+                @change="onPromptSelectionChange"
             >
                 <el-option
                     v-for="item in prompts"
@@ -82,6 +82,15 @@
                     class="width--full"
                 >
                     Run Categorization
+                </el-button>
+
+                <el-button
+                    :type="(selectedPrompt && !isPromptModified && selectedPrompt !== currentSystemPromptId) ? 'primary' : 'default'"
+                    @click="setSystemPrompt"
+                    :disabled="!selectedPrompt || isPromptModified || selectedPrompt === currentSystemPromptId"
+                    class="system-prompt-button"
+                >
+                    {{ selectedPrompt === currentSystemPromptId ? 'Current System Default' : 'Set as System Prompt' }}
                 </el-button>
                 
                 <el-button
@@ -189,6 +198,10 @@ export default {
             type: Array,
             default: () => [],
         },
+        currentSystemPromptId: {
+            type: String,
+            default: null,
+        }
     },
     methods: {
         handleChainIdChange(value) {
@@ -200,8 +213,9 @@ export default {
         handleProviderChange() {
             this.$emit('provider-change', this.selectedProviders);
         },
-        handlePromptChange() {
-            this.$emit('prompt-change', this.selectedPrompt);
+        onPromptSelectionChange(newPromptId) {
+            this.$emit('update:selected-prompt', newPromptId);
+            this.$emit('prompt-change', newPromptId);
         },
         handlePromptInput(value) {
             this.$emit('prompt-input', value);
@@ -232,6 +246,11 @@ export default {
         },
         handleNewPromptNameUpdate(value) {
             this.$emit('update:new-prompt-name', value);
+        },
+        setSystemPrompt() {
+            if (this.selectedPrompt && !this.isPromptModified) {
+                this.$emit('set-system-prompt', this.selectedPrompt);
+            }
         },
     },
 };
@@ -278,9 +297,14 @@ export default {
     display: flex;
     gap: 10px;
     margin-bottom: 15px;
+    align-items: center;
 }
 
 .clear-history-button {
     min-width: 120px;
+}
+
+.system-prompt-button {
+    min-width: 180px;
 }
 </style> 

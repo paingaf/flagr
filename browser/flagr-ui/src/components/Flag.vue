@@ -54,10 +54,12 @@
                                 :categorization-runs="categorizationRuns"
                                 :expanded-runs.sync="expandedRuns"
                                 :expanded-json.sync="expandedJson"
+                                :current-system-prompt-id="currentSystemPromptId"
                                 @provider-change="handleProviderChange"
                                 @prompt-change="handlePromptChange"
                                 @prompt-input="handlePromptInput"
                                 @save-prompt="savePrompt"
+                                @set-system-prompt="handleSetSystemPrompt"
                                 @cancel-prompt-edit="cancelPromptEdit"
                                 @run-categorization="runCategorization"
                                 @clear-categorization-history="clearCategorizationHistory"
@@ -326,6 +328,7 @@ export default {
             expandedChainData: [],
             showUserData: false,
             expandedUserData: [],
+            currentSystemPromptId: null,
         };
     },
     computed: {
@@ -1398,6 +1401,34 @@ export default {
             this.newVariant = variant;
             this.createVariant();
         },
+        async fetchCurrentSystemPrompt() {
+            try {
+                const response = await tgAxios.get('/app-config');
+                // Assuming the response has a field like { promptId: "someId" } or { promptId: null }
+                this.currentSystemPromptId = response.data.promptId !== undefined ? response.data.promptId : (response.data.categoryMatchPrompt ? 'legacy_default' : null);
+                console.log('Fetched current system prompt ID:', this.currentSystemPromptId);
+            } catch (error) {
+                console.error('Error fetching current system prompt ID:', error);
+                this.$message.error('Failed to fetch current system prompt configuration.');
+                // Keep it null or handle appropriately if backend returns specific error for not set
+                this.currentSystemPromptId = null; 
+            }
+        },
+        async handleSetSystemPrompt(promptId) {
+            if (promptId === this.currentSystemPromptId) {
+                this.$message.info('This prompt is already the system default.');
+                return;
+            }
+            try {
+                await tgAxios.post('/app-config', { promptId });
+                this.$message.success(`Successfully set system prompt to: ${promptId ? promptId : 'Hardcoded Default'}`);
+                // Refresh the current system prompt ID
+                await this.fetchCurrentSystemPrompt();
+            } catch (error) {
+                console.error('Error setting system prompt:', error);
+                this.displayErrorNotification('Failed to set system prompt', error);
+            }
+        },
     },
     async created() {
         this.debounceSearchUsers = debounce(this.searchUsers, 300);
@@ -1421,6 +1452,7 @@ export default {
         this.fetchAuthors();
         await this.fetchLLMModels();
         this.fetchPrompts();
+        this.fetchCurrentSystemPrompt();
 
         // Try to sync any pending runs
         if (this.pendingRuns && this.pendingRuns.length > 0) {
