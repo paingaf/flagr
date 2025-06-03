@@ -820,7 +820,11 @@ export default {
                 });
             }
         },
+<<<<<<< HEAD
         async savePrompt(payload) {
+=======
+        async savePrompt() {
+>>>>>>> fa695465f98bdacdc4a94f82be84b7a52c59df64
             // payload contains {name, content} but we use the synced component data instead
             if (!this.newPromptName) {
                 this.$message.error('Please enter a prompt name');
