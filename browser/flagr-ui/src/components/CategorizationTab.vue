@@ -60,10 +60,12 @@
         <div class="header-row">
             <div class="context-input-group">
                 <prompt-editor
-                    :prompt-text.sync="promptText"
+                    :prompt-text="promptText"
                     :original-prompt-text="originalPromptText"
-                    :new-prompt-name.sync="newPromptName"
+                    :new-prompt-name="newPromptName"
                     :is-modified="isPromptModified"
+                    @update:promptText="handlePromptTextUpdate"
+                    @update:newPromptName="handleNewPromptNameUpdate"
                     @input="handlePromptInput"
                     @save-prompt="savePrompt"
                     @cancel-edit="cancelPromptEdit"
@@ -201,11 +203,11 @@ export default {
         handlePromptChange() {
             this.$emit('prompt-change', this.selectedPrompt);
         },
-        handlePromptInput() {
-            this.$emit('prompt-input');
+        handlePromptInput(value) {
+            this.$emit('prompt-input', value);
         },
-        savePrompt() {
-            this.$emit('save-prompt');
+        savePrompt(payload) {
+            this.$emit('save-prompt', payload);
         },
         cancelPromptEdit() {
             this.$emit('cancel-prompt-edit');
@@ -224,6 +226,12 @@ export default {
         },
         handleRunExpand(expandedNames) {
             this.$emit('run-expand', expandedNames);
+        },
+        handlePromptTextUpdate(value) {
+            this.$emit('update:prompt-text', value);
+        },
+        handleNewPromptNameUpdate(value) {
+            this.$emit('update:new-prompt-name', value);
         },
     },
 };

@@ -803,6 +803,7 @@ export default {
             }
         },
         handlePromptInput(value) {
+            // The promptText is updated automatically via .sync binding, no need to set it here
             // Always check if the prompt has been modified, even if no prompt is selected
             this.isPromptModified = value !== this.originalPromptText;
             this.checkAllVariantsStaleness();
@@ -820,6 +821,7 @@ export default {
             }
         },
         async savePrompt() {
+            // payload contains {name, content} but we use the synced component data instead
             if (!this.newPromptName) {
                 this.$message.error('Please enter a prompt name');
                 return;
